@@ -1,5 +1,5 @@
 import mongoose, { Schema } from "mongoose";
-
+import mongooseAggregatePaginate from "mongoose-aggregate-paginate-v2";
 const blogSchema = new Schema(
   {
     title: {
@@ -18,8 +18,13 @@ const blogSchema = new Schema(
       type: String,
       required: true,
     },
+    coverImage: {
+      type: String, //cloudinary
+      required: true,
+    },
     view: {
       type: Number,
+      default: 0,
     },
     status: {
       type: String,
@@ -31,5 +36,7 @@ const blogSchema = new Schema(
   },
   { timestamps: true }
 );
+
+blogSchema.plugin(mongooseAggregatePaginate);
 
 export const Blog = mongoose.model("Blog", blogSchema);
