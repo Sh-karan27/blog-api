@@ -11,6 +11,7 @@ const userSchema = new Schema(
       trim: true,
       index: true,
     },
+
     email: {
       type: String,
       required: true,
@@ -23,13 +24,22 @@ const userSchema = new Schema(
       type: String, //cloudinary url
       required: true,
     },
+
     coverImage: {
       type: String,
     },
+
     bio: {
       type: String,
       default: "",
     },
+    
+    bookmarks: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Blog",
+      },
+    ],
 
     password: {
       type: String,
