@@ -15,8 +15,8 @@ const registerUser = asyncHandler(async (req, res) => {
   //check for user creation
   //retunr resm
 
-  const { username, email, password } = req.body;
-  console.log(username, email, password);
+  const { username, email, password, bio } = req.body;
+
   if ([username, password, email].some((field) => field.trim() === "")) {
     throw new ApiError(400, "All fileds are required");
   }
@@ -28,8 +28,15 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   const profileImagelocalPath = req.files?.profileImage[0]?.path;
-  console.log(req.files);
-  const coverImageLocalPath = req.files?.coverImage[0].path;
+
+  let coverImageLocalPath;
+  if (
+    req.files &&
+    Array.isArray(req.files.coverImage) &&
+    req.files.coverImage.length > 0
+  ) {
+    coverImageLocalPath = req.files.coverImage[0].path;
+  }
 
   if (!profileImagelocalPath) {
     throw new ApiError(400, "profile image is required");
@@ -47,6 +54,7 @@ const registerUser = asyncHandler(async (req, res) => {
     password,
     profileImage: profileImage.url,
     coverImage: coverImage?.url || "",
+    bio,
   });
 
   const createdUser = await User.findById(user._id).select(
