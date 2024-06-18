@@ -33,7 +33,7 @@ const userSchema = new Schema(
       type: String,
       default: "",
     },
-    
+
     bookmarks: [
       {
         type: Schema.Types.ObjectId,
@@ -63,7 +63,7 @@ userSchema.methods.isPasswordCorrect = async function (password) {
   return await bcrypt.compare(password, this.password);
 };
 
-userSchema.methods.genrateAccessToken = async function () {
+userSchema.methods.genrateAccessToken = function () {
   return jwt.sign(
     {
       _id: this._id,
@@ -76,7 +76,7 @@ userSchema.methods.genrateAccessToken = async function () {
     }
   );
 };
-userSchema.methods.genrateRefreshToken = async function () {
+userSchema.methods.genrateRefreshToken = function () {
   return jwt.sign(
     {
       _id: this._id,
@@ -87,6 +87,5 @@ userSchema.methods.genrateRefreshToken = async function () {
     }
   );
 };
-userSchema.methods.genrateRefreshToken = async function () {};
 
 export const User = mongoose.model("User", userSchema);

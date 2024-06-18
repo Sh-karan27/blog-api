@@ -11,7 +11,8 @@ const genrateAccessAndRefreshToken = async (userId) => {
     const refreshToken = user.genrateRefreshToken();
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
-
+    console.log(accessToken);
+    console.log(refreshToken);
     return { accessToken, refreshToken };
   } catch (error) {
     throw new ApiError(
@@ -97,7 +98,7 @@ const loginUser = asyncHandler(async (req, res) => {
 
   const { username, email, password } = req.body;
 
-  if (!username || !email) {
+  if (!username && !email) {
     throw new ApiError(400, "username or password is required");
   }
   const user = await User.findOne({
@@ -115,12 +116,16 @@ const loginUser = asyncHandler(async (req, res) => {
   }
 
   const { refreshToken, accessToken } = await genrateAccessAndRefreshToken(
-    user?._id
+    user._id
   );
 
-  const loggedInUser = await User.findById(user?._id).select(
-    "-password -refreshToken"
+  console.log(refreshToken);
+  console.log(accessToken);
+
+  const loggedInUser = await User.findById(user._id).select(
+    "-password "
   );
+  console.log(loggedInUser);
 
   const options = {
     httpOnly: true,
@@ -134,7 +139,11 @@ const loginUser = asyncHandler(async (req, res) => {
     .json(
       new ApiResponse(
         200,
-        { user: loggedInUser, accessToken, refreshToken },
+        {
+          user: loggedInUser,
+          accessToken,
+          refreshToken,
+        },
         "User logged in success fully"
       )
     );
@@ -144,8 +153,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   await User.findByIdAndUpdate(
     req.user._id,
     {
-      $set: {
-        refreshToken: undefined,
+      $unset: {
+        refreshToken: 1,
       },
     },
     {
