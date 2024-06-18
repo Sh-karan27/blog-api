@@ -29,9 +29,11 @@ const blogSchema = new Schema(
     status: {
       type: String,
       enum: ["Draft", "Published", "Archived"],
+      default: "Draft",
     },
     tag: {
-      type: [String],
+      type: Schema.Types.ObjectId, // add refrence to Tag model
+      ref: "Tag",
     },
   },
   { timestamps: true }

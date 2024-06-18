@@ -20,6 +20,11 @@ const userSchema = new Schema(
       trim: true,
     },
 
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+    },
+
     profileImage: {
       type: String, //cloudinary url
       required: true,
@@ -34,17 +39,19 @@ const userSchema = new Schema(
       default: "",
     },
 
-    bookmarks: [
+    watchHistory: [
       {
         type: Schema.Types.ObjectId,
         ref: "Blog",
       },
     ],
 
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-    },
+    bookmarks: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Blog",
+      },
+    ],
 
     refreshToken: {
       type: String,
