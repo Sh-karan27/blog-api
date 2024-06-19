@@ -73,7 +73,7 @@ const registerUser = asyncHandler(async (req, res) => {
     username: username.toLowerCase(),
     email,
     password,
-    profileImage: profileImage.url,
+    profileImage: { url: profileImage.url, public_id: profileImage.public_id },
     coverImage: coverImage?.url || "",
     bio,
   });
@@ -250,7 +250,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
-  const { username, email  } = req.body;
+  const { username, email } = req.body;
 
   if (!(username || email)) {
     throw new ApiError(401, "all fields are require");
@@ -262,7 +262,6 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
       $set: {
         email,
         username,
-        
       },
     },
     {
@@ -276,11 +275,13 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  // const deleteOldProfile = await deletFromCloudinary(req.user?.profileImage);
+  const deleteOldProfile = await deletFromCloudinary(
+    req.user?.profileImage.public_id
+  );
 
-  // if (!deleteOldProfile) {
-  //   throw new ApiError(401, "Failed to delete old profile from cloudinary");
-  // }
+  if (!deleteOldProfile) {
+    throw new ApiError(401, "Failed to delete old profile from cloudinary");
+  }
 
   const profileLocalPath = req.file?.path;
   if (!profileLocalPath) {
@@ -297,11 +298,19 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
     req.user?._id,
     {
       $set: {
-        profileImage: profileImage.url,
+        profileImage: {
+          url: profileImage.url,
+          public_id: profileImage.public_id,
+        },
       },
     },
     { new: true }
   ).select("-password");
+  console.log(user);
+
+  if (!user) {
+    throw new ApiError(404, "failed to update profile");
+  }
   return res
     .status(200)
     .json(new ApiResponse(200, user, "profile changed successfully"));

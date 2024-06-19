@@ -26,12 +26,23 @@ const userSchema = new Schema(
     },
 
     profileImage: {
-      type: String, //cloudinary url
-      required: true,
+      public_id: {
+        type: String, //cloudinary url
+        required: true,
+      },
+      url: {
+        type: String,
+        required: true,
+      },
     },
 
     coverImage: {
-      type: String,
+      public_id: {
+        type: String, //cloudinary url
+      },
+      url: {
+        type: String,
+      },
     },
 
     bio: {
