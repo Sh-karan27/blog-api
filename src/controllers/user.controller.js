@@ -275,12 +275,15 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const deleteOldProfile = await deletFromCloudinary(
-    req.user?.profileImage.public_id
-  );
+  const { profileImage: oldProfileImage } = req.user;
 
-  if (!deleteOldProfile) {
-    throw new ApiError(401, "Failed to delete old profile from cloudinary");
+  if (oldProfileImage && oldProfileImage.public_id) {
+    const deleteOldProfile = await deletFromCloudinary(
+      oldProfileImage.public_id
+    );
+    if (!deleteOldProfile) {
+      throw new ApiError(401, "Failed to delete old profile from cloudinary");
+    }
   }
 
   const profileLocalPath = req.file?.path;

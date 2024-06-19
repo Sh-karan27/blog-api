@@ -28,13 +28,13 @@ const uploadOnCloudinary = async (localFilePath) => {
 const deletFromCloudinary = async (publicId) => {
   try {
     if (!publicId) return null;
-    const response = cloudinary.v2.uploader.destroy(publicId, {
-      resource_type: "auto",
-    });
-    console.log(response);
+    const response = cloudinary.v2.uploader
+      .destroy(publicId, { resource_type: "image" })
+      .then((result) => console.log(result));
     return response;
   } catch (error) {
     console.error("Error deleting from Cloudinary:", error);
+    return null;
   }
 };
 
