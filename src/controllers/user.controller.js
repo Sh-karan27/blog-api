@@ -2,7 +2,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import {
-  deletFromCloudinary,
+  deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
@@ -274,17 +274,8 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated"));
 });
 
-const updateUserAvatar = asyncHandler(async (req, res) => {
-  const { profileImage: oldProfileImage } = req.user;
-
-  if (oldProfileImage && oldProfileImage.public_id) {
-    const deleteOldProfile = await deletFromCloudinary(
-      oldProfileImage.public_id
-    );
-    if (!deleteOldProfile) {
-      throw new ApiError(401, "Failed to delete old profile from cloudinary");
-    }
-  }
+const updateUserProfileImage = asyncHandler(async (req, res) => {
+  const oldProfileImage = req.user?.profileImage?.public_id;
 
   const profileLocalPath = req.file?.path;
   if (!profileLocalPath) {
@@ -296,6 +287,8 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
   if (!profileImage.url) {
     throw new ApiError(404, "error while uploading avatar");
   }
+
+  const deleteOldProfileImage = await deleteFromCloudinary(oldProfileImage);
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -333,7 +326,7 @@ export {
   changeCurrentPassword,
   getCurrentUser,
   updateAccountDetails,
-  updateUserAvatar,
+  updateUserProfileImage,
   updateUserCoverImage,
   getUserChannelProfile,
   getWatchHistory,
