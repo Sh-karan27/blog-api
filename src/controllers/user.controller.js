@@ -426,7 +426,41 @@ const getWatchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
     {
       $match: {
-        _id: new mongoose.Types.ObjectId(),
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "blogs",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $project: {
+              title: 1,
+              coverImage: 1,
+              views: 1,
+              tag: 1,
+            },
+          },
+          {
+            $lookup: {
+              from: "users",
+              localField: "author",
+              foreignField: "_id",
+              as: "publisher",
+              pipeline: [
+                {
+                  $project: {
+                    username: 1,
+                    profileImage: 1,
+                  },
+                },
+              ],
+            },
+          },
+        ],
       },
     },
   ]);
