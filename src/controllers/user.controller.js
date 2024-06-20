@@ -363,24 +363,64 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(401, "User name is required");
   }
 
-  const userChannel = User.aggregate([
+  const userProfile = await User.aggregate([
     {
       $match: { username: username?.toLowerCase() },
     },
     {
       $lookup: {
-        from: follower,
-        localField: _id,
-        foreignField: follower,
-        as: followers,
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "following",
+        as: "followers",
       },
     },
     {
       $lookup: {
-        from: follower,
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "follower",
+        as: "following",
+      },
+    },
+
+    {
+      $addFields: {
+        followerCount: {
+          $size: "$followers",
+        },
+        followingToCount: {
+          $size: "$following",
+        },
+        isFollowing: {
+          $cond: {
+            if: { $in: [req.user?._id, "$followers.follower"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        username: 1,
+        followerCount: 1,
+        followingToCount: 1,
+        isFollowing: 1,
+        profileImage: 1,
+        coverImage: 1,
+        email: 1,
       },
     },
   ]);
+  if (!userProfile) {
+    throw new ApiError(404, "channel does not exist");
+  }
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(200, userProfile, "user analytic fetched successfully")
+    );
 });
 
 const getWatchHistory = asyncHandler(async (req, res) => {});
