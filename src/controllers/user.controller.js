@@ -7,7 +7,6 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-
 const genrateAccessAndRefreshToken = async (userId) => {
   try {
     const user = await User.findById(userId);
@@ -423,7 +422,15 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     );
 });
 
-const getWatchHistory = asyncHandler(async (req, res) => {});
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types(),
+      },
+    },
+  ]);
+});
 
 export {
   registerUser,
