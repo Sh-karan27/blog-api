@@ -74,7 +74,7 @@ const registerUser = asyncHandler(async (req, res) => {
     email,
     password,
     profileImage: { url: profileImage.url, public_id: profileImage.public_id },
-    coverImage: coverImage?.url || "",
+    coverImage: { url: coverImage.url || "", public_id: coverImage.public_id },
     bio,
   });
 
@@ -312,9 +312,76 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "profile changed successfully"));
 });
 
-const updateUserCoverImage = asyncHandler(async (req, res) => {});
+const updateUserCoverImage = asyncHandler(async (req, res) => {
+  const oldCoverImage = req.user?.coverImage?.public_id;
 
-const getUserChannelProfile = asyncHandler(async (req, res) => {});
+  const newCoverImageLocalPath = req.file?.path;
+
+  if (!newCoverImageLocalPath) {
+    throw new ApiError(401, "Cover image is missing");
+  }
+
+  const newCoverImage = await uploadOnCloudinary(newCoverImageLocalPath);
+
+  if (!newCoverImage) {
+    throw new ApiError(404, "error while uploading cover Image");
+  }
+
+  const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
+
+  if (!deleteOldCoverImage) {
+    throw new ApiError(404, "Failed to delete old cover Image");
+  }
+
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: {
+          url: newCoverImage.url,
+          public_id: newCoverImage.public_id,
+        },
+      },
+    },
+    {
+      new: true,
+    }
+  );
+  if (!user) {
+    throw new ApiError(404, "failed to upload new coverImage");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, user, "CoverImage chnaged successfully"));
+});
+
+const getUserChannelProfile = asyncHandler(async (req, res) => {
+  const { username } = req.params;
+
+  if (!username?.trim()) {
+    throw new ApiError(401, "User name is required");
+  }
+
+  const userChannel = User.aggregate([
+    {
+      $match: { username: username?.toLowerCase() },
+    },
+    {
+      $lookup: {
+        from: follower,
+        localField: _id,
+        foreignField: follower,
+        as: followers,
+      },
+    },
+    {
+      $lookup: {
+        from: follower,
+      },
+    },
+  ]);
+});
 
 const getWatchHistory = asyncHandler(async (req, res) => {});
 
