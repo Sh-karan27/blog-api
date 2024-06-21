@@ -72,7 +72,7 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Enter a valid profileId");
   }
 
-  const subscriber = await Subscription.aggregate([
+  const follower = await Subscription.aggregate([
     {
       $match: {
         following: profileId,
@@ -100,17 +100,50 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
                   if: {
                     $in: [req.user?._id, "$followedToFollower.follower"],
                   },
-                  then: treu,
+                  then: true,
                   else: false,
                 },
               },
             },
           },
+          {
+            $project: {
+              username: 1,
+              profileImage: 1,
+              followedToFollower: 1,
+            },
+          },
         ],
+      },
+    },
+    {
+      $addFields: {
+        followerCount: {
+          $size: "$follower",
+        },
+      },
+    },
+    {
+      $project: {
+        follower: 1,
+        followerCount: 1,
       },
     },
   ]);
   // controller to return subscriber list of a channel
+  if (!follower) {
+    throw new ApiError(500, "Failed to get user followers");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        follower,
+        "user profile follower fetched successfully"
+      )
+    );
 });
 
 const getUserProfileFollowing = asyncHandler(async (req, res) => {
