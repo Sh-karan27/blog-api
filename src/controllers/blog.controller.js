@@ -16,11 +16,9 @@ const getAllBlogs = asyncHandler(async (req, res) => {
 });
 
 const publishBlog = asyncHandler(async (req, res) => {
-  const { title, description, content, status, tag } = req.body;
+  const { title, description, content, tag } = req.body;
 
-  if (
-    [title, description, content, status].some((field) => field.trim() === "")
-  ) {
+  if ([title, description, content].some((field) => field.trim() === "")) {
     throw new ApiError(401, "All fields are required");
   }
 
@@ -41,7 +39,6 @@ const publishBlog = asyncHandler(async (req, res) => {
     title,
     description,
     content,
-    status,
     coverImage: {
       public_id: coverImage.public_id,
       url: coverImage.url,
@@ -260,10 +257,87 @@ const updateBlog = asyncHandler(async (req, res) => {
 
 const deleteBlog = asyncHandler(async (req, res) => {
   //delete blog by id
+  const { blogId } = req.params;
+
+  if (!isValidObjectId(blogId)) {
+    throw new ApiError(401, "Enter a valid blogId ");
+  }
+
+  const blog = await Blog.findById(blogId);
+  if (!blog) {
+    throw new ApiError(500, "blog doesnt exist");
+  }
+
+  if (blog.author.toString() !== req.user?._id.toString()) {
+    throw new ApiError(
+      404,
+      "You cant delete this blog since you are not the author"
+    );
+  }
+  const deleteBlog = await Blog.findByIdAndDelete(blogId);
+  if (!deleteBlog) {
+    throw new ApiError(404, "Failed to delete video try again");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, "Video deleted successfully"));
 });
 
 const toggleStatus = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
+
+  if (!isValidObjectId(blogId)) {
+    throw new ApiError(401, "Invalid blogId");
+  }
+
+  const blog = await Blog.findById(blogId);
+  if (!blog) {
+    throw new ApiError(404, "blog doesnt exist");
+  }
+
+  if (blog?.author.toString() !== req.user?._id.toString()) {
+    throw new ApiError(404, "Your are not the author you cannot edit blog ");
+  }
+
+  if (blog?.published === true) {
+    const publishBlog = await Blog.findByIdAndUpdate(
+      blogId,
+      {
+        $set: {
+          published: false,
+        },
+      },
+      {
+        new: true,
+      }
+    ).select("title description coverImage author published");
+
+    return res
+      .status(200)
+      .json(
+        new ApiResponse(200, publishBlog, "toggle blog status successfully")
+      );
+  }
+
+  const publishBlog = await Blog.findByIdAndUpdate(
+    blogId,
+    {
+      $set: {
+        published: true,
+      },
+    },
+    {
+      new: true,
+    }
+  ).select("title description coverImage author published");
+  if (!publishBlog) {
+    throw new ApiError(500, "Failed to toggle blog status");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, publishBlog, "toggle blog status successfully"));
   //change the status
 });
 

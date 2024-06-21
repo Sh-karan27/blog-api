@@ -30,10 +30,9 @@ const blogSchema = new Schema(
       type: Number,
       default: 0,
     },
-    status: {
-      type: String,
-      enum: ["Draft", "Published", "Archived"],
-      default: "Draft",
+    published: {
+      type: Boolean,
+      default: true,
     },
     tag: [
       {
