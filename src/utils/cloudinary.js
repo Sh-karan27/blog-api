@@ -30,6 +30,7 @@ const deleteFromCloudinary = async (fileToDelete) => {
     const response = await cloudinary.uploader.destroy(fileToDelete, {
       resource_type: "image",
     });
+
     return response;
   } catch (error) {
     return null;
