@@ -1,4 +1,4 @@
-import mongoose, { isValidObjectId } from "mongoose";
+import mongoose, { isValidObjectId, mongo } from "mongoose";
 import { User } from "../models/user.model.js";
 import { Subscription } from "../models/subscription.model.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -66,7 +66,50 @@ const toggleFollower = asyncHandler(async (req, res) => {
 });
 
 const getUserProfileFollower = asyncHandler(async (req, res) => {
-  const { profileId } = req.params;
+  let { profileId } = req.params;
+  profileId = new mongoose.Types.ObjectId(profileId);
+  if (!isValidObjectId(profileId)) {
+    throw new ApiError(401, "Enter a valid profileId");
+  }
+
+  const subscriber = await Subscription.aggregate([
+    {
+      $match: {
+        following: profileId,
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "follower",
+        foreignField: "_id",
+        as: "follower",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "following",
+              as: "followedToFollower",
+            },
+          },
+          {
+            $addFields: {
+              followedToFollower: {
+                $cond: {
+                  if: {
+                    $in: [req.user?._id, "$followedToFollower.follower"],
+                  },
+                  then: treu,
+                  else: false,
+                },
+              },
+            },
+          },
+        ],
+      },
+    },
+  ]);
   // controller to return subscriber list of a channel
 });
 
