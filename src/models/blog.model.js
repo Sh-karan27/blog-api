@@ -19,8 +19,12 @@ const blogSchema = new Schema(
       required: true,
     },
     coverImage: {
-      type: String, //cloudinary
-      required: true,
+      public_id: {
+        type: String, //cloudinary url
+      },
+      url: {
+        type: String,
+      },
     },
     view: {
       type: Number,
@@ -31,10 +35,12 @@ const blogSchema = new Schema(
       enum: ["Draft", "Published", "Archived"],
       default: "Draft",
     },
-    tag: {
-      type: Schema.Types.ObjectId, // add refrence to Tag model
-      ref: "Tag",
-    },
+    tag: [
+      {
+        type: String,
+        default: "",
+      },
+    ],
   },
   { timestamps: true }
 );

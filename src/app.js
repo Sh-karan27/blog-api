@@ -20,12 +20,14 @@ app.use(express.static("public"));
 app.use(cookieParser());
 
 //routes
-import userRouter from "../src/routes/user.routes.js";
+import userRouter from "./routes/user.routes.js";
 import subscriptionRoutes from "./routes/subscription.routes.js";
+import blogRoutes from "./routes/blog.routes.js";
 
 //routes declaration
 
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/follow", subscriptionRoutes);
+app.use("/api/v1/blog", blogRoutes);
 
 export { app };
