@@ -147,8 +147,83 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
 });
 
 const getUserProfileFollowing = asyncHandler(async (req, res) => {
-  const { profileId } = req.params;
+  let { profileId } = req.params;
   // controller to return channel list to which user has subscribed
+  profileId = new mongoose.Types.ObjectId(profileId);
+
+  if (!isValidObjectId(profileId)) {
+    throw new ApiError(200, "Enter a valid profileId");
+  }
+
+  const following = await Subscription.aggregate([
+    {
+      $match: {
+        follower: profileId,
+      },
+    },
+    {
+      $lookup: {
+        from: "users",
+        localField: "following",
+        foreignField: "_id",
+        as: "following",
+        pipeline: [
+          {
+            $lookup: {
+              from: "subscriptions",
+              localField: "_id",
+              foreignField: "follower",
+              as: "followingUs",
+            },
+          },
+          {
+            $addFields: {
+              followingUs: {
+                $cond: {
+                  if: { $in: [req.user?._id, "$followingUs.following"] },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          {
+            $project: {
+              username: 1,
+              profileImage: 1,
+              followingUs: 1,
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        followingCount: {
+          $size: "$following",
+        },
+      },
+    },
+    {
+      $project: {
+        following: 1,
+        followingCount: 1,
+      },
+    },
+  ]);
+  if (!following) {
+    throw new ApiError(500, "Failed to get UserProfile following");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        following,
+        "user profile following fetched successfully"
+      )
+    );
 });
 
 export { toggleFollower, getUserProfileFollower, getUserProfileFollowing };
