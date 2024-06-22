@@ -100,12 +100,12 @@ const getLikedBlog = asyncHandler(async (req, res) => {
             $addFields: {
               author: "$author",
             },
-          }, {
-            $unwind:"$author"
+          },
+          {
+            $unwind: "$author",
           },
           {
             $project: {
-              _id: 0,
               title: 1,
               description: 1,
               author: 1,
