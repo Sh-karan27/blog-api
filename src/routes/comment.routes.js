@@ -9,7 +9,7 @@ import { verifyJWT } from "../middlewares/auth.middleware.js";
 
 const router = Router();
 
-app.use(verifyJWT);
+router.use(verifyJWT);
 
 router.route("/:blogId").get(getBlogComments).post(addComment);
 router.route("/c/:commentId").delete(deleteComment).patch(updateComment);
