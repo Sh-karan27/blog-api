@@ -14,10 +14,12 @@ const playlistSchema = new Schema(
       type: Schema.Types.ObjectId,
       ref: "User",
     },
-    blog: {
-      type: Schema.Types.ObjectId,
-      ref: "Blog",
-    },
+    blog: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Blog",
+      },
+    ],
   },
   {
     timestamps: true,

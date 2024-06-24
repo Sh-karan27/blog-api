@@ -12,6 +12,11 @@ const createPlaylist = asyncHandler(async (req, res) => {
   if (name.trim() === "") {
     throw new ApiError(401, "Name field is Empty");
   }
+  if (description.trim() === "") {
+    throw new ApiError(401, "Name field is Empty");
+  }
+
+  const playList = await Playlist.create();
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
