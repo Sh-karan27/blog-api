@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { Playlist } from "../models/playlist.model.js";
+import { User } from "../models/user.model.js";
 import { Blog } from "../models/blog.model.js";
 
 const createPlaylist = asyncHandler(async (req, res) => {
@@ -32,7 +33,99 @@ const createPlaylist = asyncHandler(async (req, res) => {
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
-  //TODO: get user playlists
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(401, "Enter a valid userId");
+  }
+
+  const user = await User.findById(userId);
+  if (!user) {
+    throw new ApiError(500, "User not found");
+  }
+
+  const userPlaylist = await Playlist.aggregate([
+    {
+      $match: {
+        user: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $lookup: {
+        from: "blogs",
+        localField: "blog",
+        foreignField: "_id",
+        as: "blogs",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "author",
+              foreignField: "_id",
+              as: "authorDetails",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    username: 1,
+                    "profileImage.url": 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $lookup: {
+              from: "likes",
+              localField: "_id",
+              foreignField: "blog",
+              as: "likes",
+            },
+          },
+          {
+            $addFields: {
+              authorDetails: "$authorDetails",
+              likeCount: {
+                $size: "$likes",
+              },
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        blogs: "$blogs",
+        totalBlogs: { $size: "$blogs" },
+        totalViews: { $size: "$blogs.views" },
+      },
+    },
+    {
+      $project: {
+        _id: 1,
+        name: 1,
+        description: 1,
+        totalViews: 1,
+        totalBlogs: 1,
+        blogs: {
+          title: 1,
+          description: 1,
+          content: 1,
+          "coverImage.url": 1,
+          authorDetails: 1,
+          likeCount: 1,
+          views: 1,
+          createdAt: 1,
+        },
+      },
+    },
+  ]);
+
+  if (!userPlaylist) {
+    throw new ApiError(500, "Failed to get user playlist");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userPlaylist, "user playlist fetched"));
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
