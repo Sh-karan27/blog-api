@@ -8,6 +8,10 @@ import { Blog } from "../models/blog.model.js";
 const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
   //TODO: create playlist
+
+  if (name.trim() === "") {
+    throw new ApiError(401, "Name field is Empty");
+  }
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
