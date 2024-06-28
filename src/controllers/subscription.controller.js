@@ -17,7 +17,7 @@ const toggleFollower = asyncHandler(async (req, res) => {
   );
 
   if (!userProfile) {
-    throw new ApiError(401, "failed to fectch user profile");
+    throw new ApiError(404, "failed to fectch user profile");
   }
 
   if (req.user._id.toString() === profileId.toString()) {
