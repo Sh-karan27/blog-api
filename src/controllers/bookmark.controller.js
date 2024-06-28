@@ -6,7 +6,73 @@ import { Bookmark } from "../models/bookmark.model.js";
 import mongoose, { isValidObjectId, mongo } from "mongoose";
 import { User } from "../models/user.model.js";
 
-const getUserBookmarks = asyncHandler(async (req, res) => {});
+const getUserBookmarks = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: {
+        _id: new mongoose.Types.ObjectId(req.user?._id),
+      },
+    },
+    {
+      $lookup: {
+        from: "blogs",
+        localField: "bookmarks",
+        foreignField: "_id",
+        as: "bookmarks",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "author",
+              foreignField: "_id",
+              as: "author",
+              pipeline: [
+                {
+                  $project: {
+                    _id: 0,
+                    username: 1,
+                    profileImage: 1,
+                  },
+                },
+              ],
+            },
+          },
+          {
+            $addFields: {
+              author: {
+                $first: "$author",
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              title: 1,
+              description: 1,
+              coverImage: 1,
+              views: 1,
+              author: 1,
+            },
+          },
+        ],
+      },
+    },
+  ]);
+
+  if (!user) {
+    throw new ApiError(500, "Failed to fetch user watchHistory");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].bookmarks,
+        "User bookmarks fetched successfully"
+      )
+    );
+});
 
 const toggleBoookmark = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
