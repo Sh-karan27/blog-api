@@ -12,7 +12,190 @@ import {
 import { Like } from "../models/like.model.js";
 
 const getAllBlogs = asyncHandler(async (req, res) => {
-  const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query;
+  const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
+
+  const pipeline = [];
+
+  if (!query) {
+    throw new ApiError(401, "Please enter a query");
+  }
+
+  //pipeline to match the text seacrh query
+  pipeline.push({
+    $match: {
+      $or: [
+        {
+          title: {
+            $regex: query,
+            $options: "i",
+          },
+        },
+        {
+          description: {
+            $regex: query,
+            $options: "i",
+          },
+        },
+      ],
+      published: true,
+    },
+  });
+
+  //pipeline to sort blog search
+  if (sortBy && sortType) {
+    pipeline.push({
+      $sort: {
+        [sortBy]: sortType === "asc" ? 1 : -1,
+      },
+    });
+  } else {
+    pipeline.push({
+      $sort: {
+        createdAt: -1,
+      },
+    });
+  }
+
+  // pipeline for searched blog author details
+  pipeline.push({
+    $lookup: {
+      from: "users",
+      localField: "author",
+      foreignField: "_id",
+      as: "authorDetails",
+      pipeline: [
+        {
+          $lookup: {
+            from: "subscriptions",
+            localField: "_id",
+            foreignField: "following",
+            as: "followers",
+          },
+        },
+        {
+          $addFields: {
+            followers: {
+              $size: "$followers",
+            },
+            following: {
+              $cond: {
+                if: { $in: [req.user?._id, "$followers.follower"] },
+                then: true,
+                else: false,
+              },
+            },
+          },
+        },
+        {
+          $project: {
+            _id: 0,
+            username: 1,
+            "profileImage.url": 1,
+            followers: 1,
+            following: 1,
+          },
+        },
+      ],
+    },
+  });
+
+  //pipeline to get likes on seached blog
+  pipeline.push({
+    $lookup: {
+      from: "likes",
+      localField: "_id",
+      foreignField: "blog",
+      as: "likes",
+    },
+  });
+
+  //pipeline to get comment on seached blog
+  pipeline.push({
+    $lookup: {
+      from: "comments",
+      localField: "_id",
+      foreignField: "blog",
+      as: "comments",
+      pipeline: [
+        {
+          $lookup: {
+            from: "users",
+            localField: "user",
+            foreignField: "_id",
+            as: "user",
+          },
+        },
+        {
+          $addFields: {
+            user: "$user",
+          },
+        },
+        {
+          $unwind: "$user",
+        },
+        {
+          $project: {
+            _id: 0,
+            user: {
+              username: 1,
+              "profileImage.url": 1,
+            },
+            content: 1,
+          },
+        },
+      ],
+    },
+  });
+
+  // pipeline to addfields unwind and project
+  pipeline.push(
+    {
+      $addFields: {
+        commentCount: {
+          $size: "$comments",
+        },
+        comments: "$comments",
+
+        likeCount: {
+          $size: "$likes",
+        },
+
+        isLiked: {
+          $cond: {
+            if: { $in: [req.user?._id, "$likes.likedBy"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $unwind: "$authorDetails",
+    },
+    {
+      $project: {
+        authorDetails: 1,
+        title: 1,
+        description: 1,
+        content: 1,
+        "coverImage.url": 1,
+        views: 1,
+        isLiked: 1,
+        likeCount: 1,
+        comments: 1,
+        commentCount: 1,
+      },
+    }
+  );
+
+  const blogArggregate = await Blog.aggregate(pipeline);
+  if (!blogArggregate) {
+    throw new ApiError(500, "Failed to fetch blogs try again");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, blogArggregate, "Blogs fetched successfully"));
 });
 
 const publishBlog = asyncHandler(async (req, res) => {

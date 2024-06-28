@@ -7,7 +7,7 @@ import {
 } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import jwt from "jsonwebtoken";
-
+import mongoose from "mongoose";
 
 const genrateAccessAndRefreshToken = async (userId) => {
   try {
@@ -21,7 +21,7 @@ const genrateAccessAndRefreshToken = async (userId) => {
   } catch (error) {
     throw new ApiError(
       500,
-      "something went wring while gentrating refresh& access token"
+      "something went wring while gentrating refresh & access token"
     );
   }
 };
@@ -110,7 +110,7 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new ApiError(400, "user not found please register");
+    throw new ApiError(404, "user not found please register");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
@@ -225,7 +225,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!(oldPassword || newPassword)) {
-    throw new ApiError(401, "Both password are required");
+    throw new ApiError(400, "Both password are required");
   }
 
   const user = await User.findById(req.user?._id);
@@ -233,7 +233,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const correctPassword = user.isPasswordCorrect(oldPassword);
 
   if (!correctPassword) {
-    throw new ApiError(400, "invalid password try again");
+    throw new ApiError(401, "Incorrect password try again");
   }
   user.password = newPassword;
 
@@ -254,7 +254,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   const { username, email } = req.body;
 
   if (!(username || email)) {
-    throw new ApiError(401, "all fields are require");
+    throw new ApiError(400, "All fields are require");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -270,6 +270,10 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     }
   ).select("-password -refreshToken");
 
+  if (!user) {
+    throw new ApiError(400, "Failed to update account details try again");
+  }
+
   return res
     .status(200)
     .json(new ApiResponse(200, user, "Account details updated"));
@@ -280,16 +284,20 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
 
   const profileLocalPath = req.file?.path;
   if (!profileLocalPath) {
-    throw new ApiError(401, "profile file is missing");
+    throw new ApiError(404, "profile file is missing");
   }
 
   const profileImage = await uploadOnCloudinary(profileLocalPath);
 
   if (!profileImage.url) {
-    throw new ApiError(404, "error while uploading avatar");
+    throw new ApiError(500, "Error while uploading avatar");
   }
 
   const deleteOldProfileImage = await deleteFromCloudinary(oldProfileImage);
+
+  if (!deleteOldProfileImage) {
+    throw new ApiError(500, "Failed to delete old profileImage");
+  }
 
   const user = await User.findByIdAndUpdate(
     req.user?._id,
@@ -306,7 +314,7 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
   console.log(user);
 
   if (!user) {
-    throw new ApiError(404, "failed to update profile");
+    throw new ApiError(500, "Failed to update profile");
   }
   return res
     .status(200)
@@ -319,19 +327,19 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   const newCoverImageLocalPath = req.file?.path;
 
   if (!newCoverImageLocalPath) {
-    throw new ApiError(401, "Cover image is missing");
+    throw new ApiError(404, "Cover image is missing");
   }
 
   const newCoverImage = await uploadOnCloudinary(newCoverImageLocalPath);
 
   if (!newCoverImage) {
-    throw new ApiError(404, "error while uploading cover Image");
+    throw new ApiError(500, "Error while uploading cover Image");
   }
 
   const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
 
   if (!deleteOldCoverImage) {
-    throw new ApiError(404, "Failed to delete old cover Image");
+    throw new ApiError(500, "Failed to delete old cover Image");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -349,19 +357,19 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     }
   );
   if (!user) {
-    throw new ApiError(404, "failed to upload new coverImage");
+    throw new ApiError(500, "Failed to upload new coverImage");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "CoverImage chnaged successfully"));
+    .json(new ApiResponse(200, user, "CoverImage updated successfully"));
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
 
   if (!username?.trim()) {
-    throw new ApiError(401, "User name is required");
+    throw new ApiError(400, "User name is required");
   }
 
   const userProfile = await User.aggregate([
@@ -415,7 +423,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
   if (!userProfile) {
-    throw new ApiError(404, "channel does not exist");
+    throw new ApiError(404, "Channel does not exist");
   }
   return res
     .status(200)
@@ -439,14 +447,6 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         as: "watchHistory",
         pipeline: [
           {
-            $project: {
-              title: 1,
-              coverImage: 1,
-              views: 1,
-              tag: 1,
-            },
-          },
-          {
             $lookup: {
               from: "users",
               localField: "author",
@@ -455,6 +455,7 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               pipeline: [
                 {
                   $project: {
+                    _id: 0,
                     username: 1,
                     profileImage: 1,
                   },
@@ -462,10 +463,52 @@ const getWatchHistory = asyncHandler(async (req, res) => {
               ],
             },
           },
+          {
+            $addFields: {
+              author: {
+                $first: "$publisher",
+              },
+            },
+          },
+          {
+            $project: {
+              _id: 0,
+              title: 1,
+              description: 1,
+              coverImage: 1,
+              views: 1,
+              tag: 1,
+              author: 1,
+            },
+          },
         ],
       },
     },
+    // {
+    //   $addFields: {
+    //     watchHistory: "$watchHistory",
+    //   },
+    // },
+    // { $unwind: "$watchHistory" },
+    // {
+    //   $project: {
+    //     watchHistory: 1,
+    //   },
+    // },
   ]);
+  if (!user) {
+    throw new ApiError(500, "Failed to fetch user watchHistory");
+  }
+
+  return res
+    .status(200)
+    .json(
+      new ApiResponse(
+        200,
+        user[0].watchHistory,
+        "User watchHistory fetched successfully"
+      )
+    );
 });
 
 export {
