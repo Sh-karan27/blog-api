@@ -21,7 +21,7 @@ const genrateAccessAndRefreshToken = async (userId) => {
   } catch (error) {
     throw new ApiError(
       500,
-      "something went wring while gentrating refresh & access token"
+      "Something went wrong while gentrating refresh & access token"
     );
   }
 };
@@ -46,7 +46,7 @@ const registerUser = asyncHandler(async (req, res) => {
   const userExist = await User.findOne({ $or: [{ username }, { email }] });
 
   if (userExist) {
-    throw new ApiError(409, "user with username or email already exit");
+    throw new ApiError(409, "User with username or email already exit");
   }
 
   const profileImagelocalPath = req.files?.profileImage[0]?.path;
@@ -61,14 +61,14 @@ const registerUser = asyncHandler(async (req, res) => {
   }
 
   if (!profileImagelocalPath) {
-    throw new ApiError(400, "profile image is required");
+    throw new ApiError(400, "Profile image is required.");
   }
 
   const profileImage = await uploadOnCloudinary(profileImagelocalPath);
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!profileImage) {
-    throw new ApiError(400, "profile image is required");
+    throw new ApiError(500, "Failed to upload profile on cloudinary.");
   }
   const user = await User.create({
     username: username.toLowerCase(),
@@ -84,7 +84,7 @@ const registerUser = asyncHandler(async (req, res) => {
   );
 
   if (!createdUser) {
-    throw new ApiError(500, "Failed to register user try again ");
+    throw new ApiError(500, "Failed to register user, try again.");
   }
 
   return res
@@ -110,13 +110,13 @@ const loginUser = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    throw new ApiError(404, "user not found please register");
+    throw new ApiError(404, "User not found. Please register");
   }
 
   const isPasswordValid = await user.isPasswordCorrect(password);
 
   if (!isPasswordValid) {
-    throw new ApiError(401, "invalid password");
+    throw new ApiError(401, "Invalid password");
   }
 
   const { refreshToken, accessToken } = await genrateAccessAndRefreshToken(
@@ -144,7 +144,7 @@ const loginUser = asyncHandler(async (req, res) => {
           accessToken,
           refreshToken,
         },
-        "User logged in success fully"
+        "User logged in successfully"
       )
     );
 });
@@ -170,7 +170,7 @@ const logoutUser = asyncHandler(async (req, res) => {
     .status(200)
     .clearCookie("accessToken", options)
     .clearCookie("refreshToken", options)
-    .json(new ApiResponse(200, {}, "user logged out"));
+    .json(new ApiResponse(200, {}, "User logged out."));
 });
 
 const refreshAccessToken = asyncHandler(async (req, res) => {
@@ -178,7 +178,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     req.cookies.refreshToken || req.body.refreshToken;
 
   if (!incomingRefreshToken) {
-    throw new ApiError(401, "unauthorized request");
+    throw new ApiError(401, "Unauthorized request");
   }
 
   try {
@@ -190,7 +190,7 @@ const refreshAccessToken = asyncHandler(async (req, res) => {
     const user = await User.findById(decodedToken?._id);
 
     if (!user) {
-      throw new ApiError(401, "invalid refreshToken ");
+      throw new ApiError(401, "Invalid refreshToken ");
     }
 
     if (incomingRefreshToken !== user?.refreshToken) {
@@ -225,7 +225,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const { oldPassword, newPassword } = req.body;
 
   if (!(oldPassword || newPassword)) {
-    throw new ApiError(400, "Both password are required");
+    throw new ApiError(400, "Both old password and new are required");
   }
 
   const user = await User.findById(req.user?._id);
@@ -233,7 +233,7 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   const correctPassword = user.isPasswordCorrect(oldPassword);
 
   if (!correctPassword) {
-    throw new ApiError(401, "Incorrect password try again");
+    throw new ApiError(401, "Incorrect password. Try again");
   }
   user.password = newPassword;
 
@@ -241,13 +241,13 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, {}, "password changed successfully"));
+    .json(new ApiResponse(200, {}, "Password changed successfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
   return res
     .status(200)
-    .json(new ApiResponse(200, req.user, "current user fetched succesfully"));
+    .json(new ApiResponse(200, req.user, "Current user fetched succesfully"));
 });
 
 const updateAccountDetails = asyncHandler(async (req, res) => {
@@ -271,7 +271,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
   ).select("-password -refreshToken");
 
   if (!user) {
-    throw new ApiError(400, "Failed to update account details try again");
+    throw new ApiError(400, "Failed to update account details. Try again");
   }
 
   return res
@@ -284,19 +284,22 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
 
   const profileLocalPath = req.file?.path;
   if (!profileLocalPath) {
-    throw new ApiError(404, "profile file is missing");
+    throw new ApiError(404, "Profile file is missing");
   }
 
   const profileImage = await uploadOnCloudinary(profileLocalPath);
 
-  if (!profileImage.url) {
-    throw new ApiError(500, "Error while uploading avatar");
+  if (!profileImage) {
+    throw new ApiError(500, "Error while uploading profileImage on cloudinary");
   }
 
   const deleteOldProfileImage = await deleteFromCloudinary(oldProfileImage);
 
   if (!deleteOldProfileImage) {
-    throw new ApiError(500, "Failed to delete old profileImage");
+    throw new ApiError(
+      500,
+      "Failed to delete old profileImage from cloudinary"
+    );
   }
 
   const user = await User.findByIdAndUpdate(
@@ -311,14 +314,13 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
-  console.log(user);
 
   if (!user) {
     throw new ApiError(500, "Failed to update profile");
   }
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "profile changed successfully"));
+    .json(new ApiResponse(200, user, "Profile changed successfully"));
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -333,13 +335,13 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   const newCoverImage = await uploadOnCloudinary(newCoverImageLocalPath);
 
   if (!newCoverImage) {
-    throw new ApiError(500, "Error while uploading cover Image");
+    throw new ApiError(500, "Error while uploading cover Image on cloudinary");
   }
 
   const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
 
   if (!deleteOldCoverImage) {
-    throw new ApiError(500, "Failed to delete old cover Image");
+    throw new ApiError(500, "Failed to delete old cover Image from cloudinary");
   }
 
   const user = await User.findByIdAndUpdate(
@@ -357,7 +359,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     }
   );
   if (!user) {
-    throw new ApiError(500, "Failed to upload new coverImage");
+    throw new ApiError(500, "Failed to change  coverImage");
   }
 
   return res
@@ -423,12 +425,12 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     },
   ]);
   if (!userProfile) {
-    throw new ApiError(404, "Channel does not exist");
+    throw new ApiError(404, "User profile does not exist");
   }
   return res
     .status(200)
     .json(
-      new ApiResponse(200, userProfile, "user analytic fetched successfully")
+      new ApiResponse(200, userProfile, "User profile fetched successfully")
     );
 });
 
@@ -484,18 +486,8 @@ const getWatchHistory = asyncHandler(async (req, res) => {
         ],
       },
     },
-    // {
-    //   $addFields: {
-    //     watchHistory: "$watchHistory",
-    //   },
-    // },
-    // { $unwind: "$watchHistory" },
-    // {
-    //   $project: {
-    //     watchHistory: 1,
-    //   },
-    // },
   ]);
+
   if (!user) {
     throw new ApiError(500, "Failed to fetch user watchHistory");
   }
