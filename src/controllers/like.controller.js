@@ -11,7 +11,7 @@ const toggleBlogLike = asyncHandler(async (req, res) => {
   //TODO: toggle like on video
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "enter valid blogId");
+    throw new ApiError(400, "Enter a valid blogId");
   }
 
   const like = await Like.findOne({
@@ -21,7 +21,7 @@ const toggleBlogLike = asyncHandler(async (req, res) => {
 
   if (like) {
     await Like.findByIdAndDelete(like?._id);
-    return res.status(200).json(new ApiResponse(200, "unLiked Blog!"));
+    return res.status(200).json(new ApiResponse(200, "UnLiked Blog!"));
   }
 
   const liked = await Like.create({
@@ -33,7 +33,7 @@ const toggleBlogLike = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to like blog");
   }
 
-  return res.status(200).json(new ApiResponse(200, "BlogLiked"));
+  return res.status(200).json(new ApiResponse(200, "Blog liked successfully."));
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {
@@ -41,7 +41,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
   //TODO: toggle like on comment
 
   if (!isValidObjectId(commentId)) {
-    throw new ApiError(401, "enter a valid commentId");
+    throw new ApiError(400, "Enter a valid commentId");
   }
   const commentLike = await Like.findOne({
     likedBy: req.user?._id,
@@ -50,7 +50,7 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 
   if (commentLike) {
     await Like.findByIdAndDelete(commentLike?._id);
-    return res.status(200).json(new ApiResponse(200, "unLiked comment!"));
+    return res.status(200).json(new ApiResponse(200, "Comment unLiked!"));
   }
 
   const commentLiked = await Like.create({
@@ -59,10 +59,10 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
   });
 
   if (!commentLiked) {
-    throw new ApiError(500, "failed to like comment try again");
+    throw new ApiError(500, "Failed to like comment, try again");
   }
 
-  return res.status(200).json(new ApiResponse(200, "comment Liked!"));
+  return res.status(200).json(new ApiResponse(200, "Comment liked!"));
 });
 
 const getLikedBlog = asyncHandler(async (req, res) => {
@@ -130,7 +130,7 @@ const getLikedBlog = asyncHandler(async (req, res) => {
     },
   ]);
   if (!likedBlog) {
-    throw new ApiResponse(500, "failed to get likedBlogs try again");
+    throw new ApiResponse(500, "Failed to fetch liked blogs, try again");
   }
 
   return res
