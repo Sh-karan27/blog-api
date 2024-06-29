@@ -10,10 +10,10 @@ const createPlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
   if (name.trim() === "") {
-    throw new ApiError(401, "Name field is Empty");
+    throw new ApiError(400, "Name field is empty.");
   }
   if (description.trim() === "") {
-    throw new ApiError(401, "Name field is Empty");
+    throw new ApiError(400, "Description field is empty.");
   }
 
   const playList = await Playlist.create({
@@ -23,23 +23,23 @@ const createPlaylist = asyncHandler(async (req, res) => {
   });
 
   if (!playList) {
-    throw new ApiError(401, "Name field is Empty");
+    throw new ApiError(500, "Failed to create playlist.");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, playList, "PlayList created successfully"));
+    .json(new ApiResponse(200, playList, "Playlist created successfully"));
 });
 
 const getUserPlaylists = asyncHandler(async (req, res) => {
   const { userId } = req.params;
   if (!isValidObjectId(userId)) {
-    throw new ApiError(401, "Enter a valid userId");
+    throw new ApiError(400, "Enter a valid userId");
   }
 
   const user = await User.findById(userId);
   if (!user) {
-    throw new ApiError(500, "User not found");
+    throw new ApiError(404, "User not found.");
   }
 
   const userPlaylist = await Playlist.aggregate([
@@ -125,14 +125,14 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, userPlaylist, "user playlist fetched"));
+    .json(new ApiResponse(200, userPlaylist, "User playlist fetched"));
 });
 
 const getPlaylistById = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
 
   if (!isValidObjectId(playlistId)) {
-    throw new ApiError(401, "Enter valid playlistId");
+    throw new ApiError(400, "Enter valid playlistId");
   }
 
   const playList = await Playlist.findById(playlistId);
@@ -190,7 +190,7 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   ]);
 
   if (!playlistBlogs) {
-    throw new ApiError(500, "failed too getPlaylist blogs");
+    throw new ApiError(500, "Failed too get blogs in playlist.");
   }
   return res
     .status(200)
@@ -203,10 +203,10 @@ const addBlogToPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, blogId } = req.params;
 
   if (!isValidObjectId(playlistId)) {
-    throw new ApiError(404, "enter valid playlistId");
+    throw new ApiError(400, "Enter valid playlistId");
   }
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(404, "enter valid blogId");
+    throw new ApiError(400, "Enter valid blogId");
   }
 
   const playlist = await Playlist.findById(playlistId);
@@ -215,13 +215,13 @@ const addBlogToPlaylist = asyncHandler(async (req, res) => {
   const blogsInPlaylist = playlist?.blog;
 
   if (blogsInPlaylist?.includes(blogId)) {
-    throw new ApiError(404, " blog already exist in playlist ");
+    throw new ApiError(404, " Blog already exist in playlist ");
   }
   if (!playlist) {
-    throw new ApiError(404, " playlist not found");
+    throw new ApiError(404, " Playlist not found");
   }
   if (!blog) {
-    throw new ApiError(404, " blog not found");
+    throw new ApiError(404, "Blog not found");
   }
 
   const addBlog = await Playlist.findByIdAndUpdate(
@@ -233,7 +233,7 @@ const addBlogToPlaylist = asyncHandler(async (req, res) => {
   );
 
   if (!addBlog) {
-    throw new ApiError(500, " failed to add blog in you playlist try again");
+    throw new ApiError(500, "Failed to add blog in playlist, try again");
   }
 
   return res
@@ -245,32 +245,32 @@ const removeBlogFromPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, blogId } = req.params;
 
   if (!isValidObjectId(playlistId)) {
-    throw new ApiError(401, "Enter valid playlist id");
+    throw new ApiError(400, "Enter valid playlist id");
   }
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "Enter valid blogId");
+    throw new ApiError(400, "Enter valid blogId");
   }
 
   const playlist = await Playlist.findById(playlistId);
   const blog = await Blog.findById(blogId);
 
   if (!playlist) {
-    throw new ApiError(404, "playlist not found");
+    throw new ApiError(404, "Playlist not found");
   }
 
   if (!blog) {
-    throw new ApiError(404, "blog not found");
+    throw new ApiError(404, "Blog not found");
   }
 
   if (playlist?.user.toString() !== req.user?._id.toString()) {
     throw new ApiError(
-      404,
+      403,
       "You are not the owner of the playlist you cant remove this blog"
     );
   }
 
   if (playlist?.blog.includes(blogId) === false) {
-    throw new ApiError(404, "blog does not exist in this playlist");
+    throw new ApiError(404, "Blog does not exist in this playlist");
   }
 
   const updatedPlayList = await Playlist.findByIdAndUpdate(
@@ -286,7 +286,7 @@ const removeBlogFromPlaylist = asyncHandler(async (req, res) => {
   );
 
   if (!updatedPlayList) {
-    throw new ApiError(500, "  Failed to remove blog from playList");
+    throw new ApiError(500, "Failed to remove blog from playlist, tr again");
   }
 
   return res
@@ -295,7 +295,7 @@ const removeBlogFromPlaylist = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         updatedPlayList,
-        "blog removed from playlist successfully"
+        "Blog removed from playlist successfully"
       )
     );
 });
@@ -304,18 +304,18 @@ const deletePlaylist = asyncHandler(async (req, res) => {
   const { playlistId } = req.params;
 
   if (!isValidObjectId(playlistId)) {
-    throw new ApiError(401, "Enter valid PlaylistId");
+    throw new ApiError(400, "Enter valid PlaylistId");
   }
 
   const playList = await Playlist.findById(playlistId);
 
   if (!playList) {
-    throw new ApiError(404, "playlist not found");
+    throw new ApiError(404, "Playlist not found");
   }
 
   if (playList?.user.toString() !== req.user?._id.toString()) {
     throw new ApiError(
-      404,
+      403,
       "Cant delete playlist,You are not the owner of this playList"
     );
   }
@@ -336,13 +336,13 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
 
   if (!isValidObjectId(playlistId)) {
-    throw new ApiError(401, "Enter valid playlist Id");
+    throw new ApiError(400, "Enter valid playlist Id");
   }
   if (name.trim() === "") {
-    throw new ApiError(401, "Name field is Empty");
+    throw new ApiError(400, "Name field is Empty");
   }
   if (description.trim() === "") {
-    throw new ApiError(401, "Description field is Empty");
+    throw new ApiError(400, "Description field is Empty");
   }
 
   const playList = await Playlist.findById(playlistId);
@@ -352,7 +352,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 
   if (playList?.user.toString() !== req.user?._id.toString()) {
-    throw new ApiError(404, "cant upload playlist you are not the owen");
+    throw new ApiError(403, "Cant update playlist you are not the owen");
   }
 
   const updatedPlayList = await Playlist.findByIdAndUpdate(
