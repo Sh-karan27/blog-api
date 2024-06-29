@@ -14,6 +14,12 @@ import { Like } from "../models/like.model.js";
 const getAllBlogs = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
 
+  const limitOfVideo = parseInt(limit);
+  const pageNumber = parseInt(page);
+
+  const skip = (pageNumber - 1) * limitOfVideo;
+  const pageSize = limitOfVideo;
+
   const pipeline = [];
 
   if (!query) {
@@ -174,6 +180,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
     },
     {
       $project: {
+        _id: 0,
         authorDetails: 1,
         title: 1,
         description: 1,
@@ -185,9 +192,15 @@ const getAllBlogs = asyncHandler(async (req, res) => {
         comments: 1,
         commentCount: 1,
       },
+    },
+    {
+      $skip: skip,
+    },
+
+    {
+      $limit: limitOfVideo,
     }
   );
-
   const blogArggregate = await Blog.aggregate(pipeline);
   if (!blogArggregate) {
     throw new ApiError(500, "Failed to fetch blogs try again");
