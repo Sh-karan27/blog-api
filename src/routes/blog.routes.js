@@ -29,5 +29,3 @@ router.route("/toggle/status/:blogId").patch(toggleStatus);
 
 export default router;
 
-
-//66759137197da527667d1b02

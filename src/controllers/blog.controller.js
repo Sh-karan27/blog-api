@@ -32,6 +32,14 @@ async function deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(
       }
     );
 
+    const blog = await Blog.findById(blogId);
+    console.log(blog);
+
+    const coverImagePublicId = blog?.coverImage.public_id;
+    console.log(coverImagePublicId);
+
+    const deleteCoverImage = await deleteFromCloudinary(coverImagePublicId);
+
     const removeFromWatchHistoryAndBookmarks = await User.updateMany(
       {},
       {
@@ -47,6 +55,7 @@ async function deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(
       deleteCommnets,
       deleteBlogFromPlaylist,
       removeFromWatchHistoryAndBookmarks,
+      deleteCoverImage,
     ]);
 
     return true;
@@ -311,6 +320,11 @@ const getBlogById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Enter a valid blogId.");
   }
 
+  const blogExist = await Blog.findById(blogId);
+  if (!blogExist) {
+    throw new ApiError(404, "Blog doesnt exist");
+  }
+
   const blog = await Blog.aggregate([
     {
       $match: {
@@ -331,6 +345,29 @@ const getBlogById = asyncHandler(async (req, res) => {
         localField: "_id",
         foreignField: "blog",
         as: "comment",
+        pipeline: [
+          {
+            $lookup: {
+              from: "users",
+              localField: "user",
+              foreignField: "_id",
+              as: "user",
+            },
+          },
+          {
+            $unwind: "$user",
+          },
+          {
+            $project: {
+              _id: 0,
+              content: 1,
+              user: {
+                username: 1,
+                "profileImage.url": 1,
+              },
+            },
+          },
+        ],
       },
     },
     {
@@ -364,6 +401,7 @@ const getBlogById = asyncHandler(async (req, res) => {
           },
           {
             $project: {
+              _id: 0,
               username: 1,
               "profileImage.url": 1,
               followerCount: 1,
@@ -375,7 +413,7 @@ const getBlogById = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        likeCounts: {
+        likeCount: {
           $size: "$likes",
         },
         author: {
@@ -388,7 +426,9 @@ const getBlogById = asyncHandler(async (req, res) => {
             else: false,
           },
         },
-        commet: {
+        comments: "$comment",
+
+        commentCount: {
           $size: "$comment",
         },
       },
@@ -401,11 +441,12 @@ const getBlogById = asyncHandler(async (req, res) => {
         content: 1,
         views: 1,
         author: 1,
-        likeCounts: 1,
+        likeCount: 1,
         isLiked: 1,
         status: 1,
         createdAt: 1,
-        commet: 1,
+        comments: 1,
+        commentCount: 1,
       },
     },
   ]);
@@ -425,7 +466,7 @@ const getBlogById = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, blog, "Blog fetched successfully"));
+    .json(new ApiResponse(200, blog[0], "Blog fetched successfully"));
 });
 
 const updateBlog = asyncHandler(async (req, res) => {
@@ -459,50 +500,53 @@ const updateBlog = asyncHandler(async (req, res) => {
     );
   }
 
-  const oldCoverImage = oldBlog?.coverImage?.public_id;
+  let newCoverImage;
+  if (req.file) {
+    const oldCoverImage = oldBlog?.coverImage?.public_id;
 
-  if (!oldCoverImage) {
-    throw new ApiError(
-      404,
-      "Failed to fetch old cover image. Public ID path is required."
-    );
+    if (!oldCoverImage) {
+      throw new ApiError(
+        404,
+        "Failed to fetch old cover image. Public ID path is required."
+      );
+    }
+
+    const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
+
+    if (!deleteOldCoverImage) {
+      throw new ApiError(
+        404,
+        "Failed to delete old cover image from Cloudinary."
+      );
+    }
+
+    const coverImageLocalPath = req.file?.path;
+    if (!coverImageLocalPath) {
+      throw new ApiError(400, "coverImage path is required");
+    }
+    newCoverImage = await uploadOnCloudinary(req.file?.path);
+
+    if (!newCoverImage) {
+      throw new ApiError(500, "Failed to upload cover image to Cloudinary.");
+    }
   }
 
-  const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
-
-  if (!deleteOldCoverImage) {
-    throw new ApiError(
-      404,
-      "Failed to delete old cover image from Cloudinary."
-    );
-  }
-
-  const coverImageLocalPath = req.file?.path;
-  if (!coverImageLocalPath) {
-    throw new ApiError(400, "coverImage path is required");
-  }
-  const newCoverImage = await uploadOnCloudinary(req.file?.path);
-
-  if (!newCoverImage) {
-    throw new ApiError(500, "Failed to upload cover image to Cloudinary.");
-  }
+  const updateFields = {
+    ...(title && { title }),
+    ...(description && { description }),
+    ...(content && { content }),
+    ...(newCoverImage && {
+      coverImage: {
+        public_id: newCoverImage.public_id,
+        url: newCoverImage.url,
+      },
+    }),
+  };
 
   const updatedBlog = await Blog.findByIdAndUpdate(
     blogId,
-    {
-      $set: {
-        title,
-        description,
-        content,
-        coverImage: {
-          public_id: newCoverImage.public_id,
-          url: newCoverImage.url,
-        },
-      },
-    },
-    {
-      new: true,
-    }
+    { $set: updateFields },
+    { new: true }
   );
 
   if (!updatedBlog) {
@@ -536,17 +580,16 @@ const deleteBlog = asyncHandler(async (req, res) => {
       "You cannot delete this blog since you are not the author."
     );
   }
-  const deleteBlog = await Blog.findByIdAndDelete(blogId);
-
-  if (!deleteBlog) {
-    throw new ApiError(500, "Failed to delete blog. Please try again.");
-  }
-
   const deleteLikes =
     await deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(blogId);
 
   if (!deleteLikes) {
     throw new ApiError(500, "Failed to delete likes and comments for blog.");
+  }
+  const deleteBlog = await Blog.findByIdAndDelete(blogId);
+
+  if (!deleteBlog) {
+    throw new ApiError(500, "Failed to delete blog. Please try again.");
   }
 
   return res
