@@ -60,7 +60,7 @@ const getUserBookmarks = asyncHandler(async (req, res) => {
   ]);
 
   if (!user) {
-    throw new ApiError(500, "Failed to fetch user watchHistory");
+    throw new ApiError(500, "Failed to fetch user bookmarks");
   }
 
   return res
@@ -78,12 +78,12 @@ const toggleBoookmark = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "enter valid blog id");
+    throw new ApiError(400, "Enter valid blog id.");
   }
   const blog = Blog.findById(blogId);
 
   if (!blog) {
-    throw new ApiError(401, " blog not found");
+    throw new ApiError(401, "Blog not found.");
   }
 
   const bookmarkExist = await Bookmark.findOne({
@@ -111,7 +111,7 @@ const toggleBoookmark = asyncHandler(async (req, res) => {
     },
   });
   if (!addBookmark) {
-    throw new ApiError(500, "failed to add bookmark try again");
+    throw new ApiError(500, "Failed to add bookmark. Please try again.");
   }
 
   return res.status(200).json(new ApiResponse(200, "Bookmark added"));
