@@ -21,7 +21,7 @@ router
   .patch(updatePlaylist)
   .delete(deletePlaylist);
 
-router.route("/add/:blogId/").patch(addBlogToPlaylist);
+router.route("/add/:playlistId/:blogId").patch(addBlogToPlaylist);
 router.route("/remove/:blogId/").patch(removeBlogFromPlaylist);
 
 router.route("/user/:userId").get(getUserPlaylists);

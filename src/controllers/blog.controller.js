@@ -3,13 +3,61 @@ import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/user.model.js";
-import { Subscription } from "../models/subscription.model.js";
 import { Blog } from "../models/blog.model.js";
 import {
   deleteFromCloudinary,
   uploadOnCloudinary,
 } from "../utils/cloudinary.js";
+import { Comment } from "../models/comment.model.js";
 import { Like } from "../models/like.model.js";
+import { Playlist } from "../models/playlist.model.js";
+
+async function deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(
+  blogId
+) {
+  try {
+    const likeDelete = await Like.deleteMany({ blog: blogId });
+    const getComments = await Comment.find({ blog: blogId });
+    const commentId = getComments.map((comment) => comment._id);
+    const delteCommentLike = await Like.deleteMany({
+      comment: { $in: commentId },
+    });
+    const deleteCommnets = await Comment.deleteMany({ blog: blogId });
+    const deleteBlogFromPlaylist = Playlist.updateMany(
+      {},
+      {
+        $pull: {
+          blog: blogId,
+        },
+      }
+    );
+
+    const removeFromWatchHistoryAndBookmarks = await User.updateMany(
+      {},
+      {
+        $pull: { watchHistory: blogId, bookmarks: blogId },
+      }
+    );
+
+    await Promise.all([
+      likeDelete,
+      getComments,
+      commentId,
+      delteCommentLike,
+      deleteCommnets,
+      deleteBlogFromPlaylist,
+      removeFromWatchHistoryAndBookmarks,
+    ]);
+
+    return true;
+  } catch (error) {
+    console.error(
+      "Error deleting likes, comments, playlist entries, and watch history for video:",
+      error
+    );
+    throw error;
+  }
+}
 
 const getAllBlogs = asyncHandler(async (req, res) => {
   const { page = 1, limit = 10, query, sortBy, sortType } = req.query;
@@ -471,13 +519,21 @@ const deleteBlog = asyncHandler(async (req, res) => {
     );
   }
   const deleteBlog = await Blog.findByIdAndDelete(blogId);
+
   if (!deleteBlog) {
     throw new ApiError(404, "Failed to delete video try again");
   }
 
+  const deleteLikes =
+    await deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(blogId);
+
+  if (!deleteLikes) {
+    throw new ApiError(400, "Failed to delete likes and comments for blog");
+  }
+
   return res
     .status(200)
-    .json(new ApiResponse(200, "Video deleted successfully"));
+    .json(new ApiResponse(200, null, "Video deleted successfully"));
 });
 
 const toggleStatus = asyncHandler(async (req, res) => {
