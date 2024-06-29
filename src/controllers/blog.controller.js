@@ -246,12 +246,13 @@ const getAllBlogs = asyncHandler(async (req, res) => {
     },
 
     {
-      $limit: limitOfVideo,
+      $limit: pageSize,
     }
   );
+
   const blogArggregate = await Blog.aggregate(pipeline);
   if (!blogArggregate) {
-    throw new ApiError(500, "Failed to fetch blogs try again");
+    throw new ApiError(500, "Failed to fetch blogs, try again.");
   }
 
   return res
@@ -269,13 +270,16 @@ const publishBlog = asyncHandler(async (req, res) => {
   const coverImageLocalPath = req.file?.path;
 
   if (!coverImageLocalPath) {
-    throw new ApiError(401, "coverImage is required");
+    throw new ApiError(400, "coverImage is required");
   }
 
   const coverImage = await uploadOnCloudinary(coverImageLocalPath);
 
   if (!coverImage) {
-    throw new ApiError(404, "Failed to upload coverImage try again");
+    throw new ApiError(
+      404,
+      "Failed to upload cover image to Cloudinary. Please try again."
+    );
   }
 
   const blog = await Blog.create({
@@ -290,8 +294,9 @@ const publishBlog = asyncHandler(async (req, res) => {
     tag,
   });
   const blogUploaded = await Blog.findById(blog?._id);
+
   if (!blogUploaded) {
-    throw new ApiError(500, "failed to upload blog try again");
+    throw new ApiError(500, "Failed to upload blog. Please try again.");
   }
 
   return res
@@ -301,8 +306,9 @@ const publishBlog = asyncHandler(async (req, res) => {
 
 const getBlogById = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
+
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "enter valid blogId");
+    throw new ApiError(400, "Enter a valid blogId.");
   }
 
   const blog = await Blog.aggregate([
@@ -405,8 +411,9 @@ const getBlogById = asyncHandler(async (req, res) => {
   ]);
 
   if (!blog) {
-    throw new ApiError(500, "failed to get blog please try again");
+    throw new ApiError(404, "Failed to get blog. Please try again.");
   }
+
   await Blog.findByIdAndUpdate(blogId, {
     $inc: { views: 1 },
   });
@@ -418,32 +425,37 @@ const getBlogById = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, blog, "blog fetched successfully"));
+    .json(new ApiResponse(200, blog, "Blog fetched successfully"));
 });
 
 const updateBlog = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "enter valid blogId");
+    throw new ApiError(400, "Enter a valid blogId.");
   }
 
   // update blog title description coverImage like details
 
-  const { title, description, content, coverImage, status } = req.body;
+  const { title, description, content } = req.body;
 
-  if (!(title || description || content || status)) {
-    throw new ApiError(401, "all fields are required");
+  if (!(title || description || content)) {
+    throw new ApiError(
+      400,
+      "At least one of the fields (title, description, content, status) is required."
+    );
   }
 
   const oldBlog = await Blog.findById(blogId);
+
   if (!oldBlog) {
-    throw new ApiError(500, "failed get old blog ");
+    throw new ApiError(500, "Failed to retrieve old blog.");
   }
+
   if (oldBlog.author.toString() !== req.user?._id.toString()) {
     throw new ApiError(
-      404,
-      "you cant edit this blog since you are not the author"
+      403,
+      "You cannot edit this blog since you are not the author."
     );
   }
 
@@ -452,23 +464,27 @@ const updateBlog = asyncHandler(async (req, res) => {
   if (!oldCoverImage) {
     throw new ApiError(
       404,
-      "failed to fetch oldCoverImage publick id path required"
+      "Failed to fetch old cover image. Public ID path is required."
     );
   }
 
   const deleteOldCoverImage = await deleteFromCloudinary(oldCoverImage);
 
   if (!deleteOldCoverImage) {
-    throw new ApiError(404, "failed to delete old coverImage");
+    throw new ApiError(
+      404,
+      "Failed to delete old cover image from Cloudinary."
+    );
   }
 
   const coverImageLocalPath = req.file?.path;
   if (!coverImageLocalPath) {
-    throw new ApiError(404, "coverImage path required");
+    throw new ApiError(400, "coverImage path is required");
   }
   const newCoverImage = await uploadOnCloudinary(req.file?.path);
+
   if (!newCoverImage) {
-    throw new ApiError(500, "failed to update coverImage try again");
+    throw new ApiError(500, "Failed to upload cover image to Cloudinary.");
   }
 
   const updatedBlog = await Blog.findByIdAndUpdate(
@@ -478,7 +494,6 @@ const updateBlog = asyncHandler(async (req, res) => {
         title,
         description,
         content,
-        status,
         coverImage: {
           public_id: newCoverImage.public_id,
           url: newCoverImage.url,
@@ -491,7 +506,10 @@ const updateBlog = asyncHandler(async (req, res) => {
   );
 
   if (!updatedBlog) {
-    throw new ApiError(500, "Failed to update blog try again");
+    throw new ApiError(
+      404,
+      "Failed to update blog. Blog not found or update operation failed."
+    );
   }
 
   return res
@@ -504,52 +522,52 @@ const deleteBlog = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "Enter a valid blogId ");
+    throw new ApiError(400, "Enter a valid blogId.");
   }
 
   const blog = await Blog.findById(blogId);
   if (!blog) {
-    throw new ApiError(500, "blog doesnt exist");
+    throw new ApiError(404, "Blog not found.");
   }
 
   if (blog.author.toString() !== req.user?._id.toString()) {
     throw new ApiError(
-      404,
-      "You cant delete this blog since you are not the author"
+      403,
+      "You cannot delete this blog since you are not the author."
     );
   }
   const deleteBlog = await Blog.findByIdAndDelete(blogId);
 
   if (!deleteBlog) {
-    throw new ApiError(404, "Failed to delete video try again");
+    throw new ApiError(500, "Failed to delete blog. Please try again.");
   }
 
   const deleteLikes =
     await deleteCommentsLikesPlaylistWatchHistoryAndBookmarkForBlogId(blogId);
 
   if (!deleteLikes) {
-    throw new ApiError(400, "Failed to delete likes and comments for blog");
+    throw new ApiError(500, "Failed to delete likes and comments for blog.");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, null, "Video deleted successfully"));
+    .json(new ApiResponse(200, null, "Blog deleted successfully"));
 });
 
 const toggleStatus = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(401, "Invalid blogId");
+    throw new ApiError(400, "Invalid blogId");
   }
 
   const blog = await Blog.findById(blogId);
   if (!blog) {
-    throw new ApiError(404, "blog doesnt exist");
+    throw new ApiError(404, "Blog not found.");
   }
 
   if (blog?.author.toString() !== req.user?._id.toString()) {
-    throw new ApiError(404, "Your are not the author you cannot edit blog ");
+    throw new ApiError(403, "You are not authorized to edit this blog.");
   }
 
   if (blog?.published === true) {
@@ -568,7 +586,7 @@ const toggleStatus = asyncHandler(async (req, res) => {
     return res
       .status(200)
       .json(
-        new ApiResponse(200, publishBlog, "toggle blog status successfully")
+        new ApiResponse(200, publishBlog, "Toggle blog status successfully")
       );
   }
 
@@ -584,12 +602,12 @@ const toggleStatus = asyncHandler(async (req, res) => {
     }
   ).select("title description coverImage author published");
   if (!publishBlog) {
-    throw new ApiError(500, "Failed to toggle blog status");
+    throw new ApiError(404, "Failed to toggle blog status.");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, publishBlog, "toggle blog status successfully"));
+    .json(new ApiResponse(200, publishBlog, "Toggle blog status successfully"));
   //change the status
 });
 
