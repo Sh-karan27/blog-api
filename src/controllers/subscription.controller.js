@@ -9,7 +9,7 @@ const toggleFollower = asyncHandler(async (req, res) => {
   const { profileId } = req.params;
 
   if (!isValidObjectId(profileId)) {
-    throw new ApiError(401, "please enter a valid id");
+    throw new ApiError(400, "Please enter a valid profileId");
   }
 
   const userProfile = await User.findById(profileId).select(
@@ -17,11 +17,11 @@ const toggleFollower = asyncHandler(async (req, res) => {
   );
 
   if (!userProfile) {
-    throw new ApiError(404, "failed to fectch user profile");
+    throw new ApiError(500, "Failed to fetch user profile");
   }
 
   if (req.user._id.toString() === profileId.toString()) {
-    throw new ApiError(400, "You cannot follow to your own profile.");
+    throw new ApiError(404, "You cannot follow to your own profile.");
   }
 
   const follower = await Subscription.findOne({
@@ -51,7 +51,7 @@ const toggleFollower = asyncHandler(async (req, res) => {
   });
 
   if (!startedFollowing) {
-    throw new ApiError(400, "Unable to follow this user please try again");
+    throw new ApiError(500, "Unable to follow this user please try again");
   }
 
   return res
@@ -60,7 +60,7 @@ const toggleFollower = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         { following: true, userProfile },
-        "you are now following this user"
+        "You are now following this user"
       )
     );
 });
@@ -69,7 +69,7 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
   let { profileId } = req.params;
   profileId = new mongoose.Types.ObjectId(profileId);
   if (!isValidObjectId(profileId)) {
-    throw new ApiError(401, "Enter a valid profileId");
+    throw new ApiError(400, "Enter a valid profileId");
   }
 
   const follower = await Subscription.aggregate([
@@ -141,7 +141,7 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
       new ApiResponse(
         200,
         follower,
-        "user profile follower fetched successfully"
+        "User profile follower fetched successfully"
       )
     );
 });
@@ -152,7 +152,7 @@ const getUserProfileFollowing = asyncHandler(async (req, res) => {
   profileId = new mongoose.Types.ObjectId(profileId);
 
   if (!isValidObjectId(profileId)) {
-    throw new ApiError(200, "Enter a valid profileId");
+    throw new ApiError(400, "Enter a valid profileId");
   }
 
   const following = await Subscription.aggregate([
