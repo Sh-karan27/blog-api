@@ -10,8 +10,14 @@ const getBlogComments = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
   const { page = 1, limit = 10 } = req.query;
 
+  const limitOfVideo = parseInt(limit);
+  const pageNumber = parseInt(page);
+
+  const skip = (pageNumber - 1) * limitOfVideo;
+  const pageSize = limitOfVideo;
+
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(404, "Please enter valid BlogId");
+    throw new ApiError(400, "Please enter a valid BlogId.");
   }
 
   const blogComments = await Comment.aggregate([
@@ -66,15 +72,21 @@ const getBlogComments = asyncHandler(async (req, res) => {
     {
       $unwind: "$user",
     },
+    {
+      $skip: skip,
+    },
+    {
+      $limit: pageSize,
+    },
   ]);
 
   if (!blogComments) {
-    throw new ApiResponse(500, "Failed to get blog comments");
+    throw new ApiError(500, "Failed to get blog comments.");
   }
 
   return res
     .status(200)
-    .json(new ApiResponse(200, blogComments, "comments fetched successfully"));
+    .json(new ApiResponse(200, blogComments, "Comments fetched successfully"));
 });
 
 const addComment = asyncHandler(async (req, res) => {
@@ -82,11 +94,11 @@ const addComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
 
   if (!isValidObjectId(blogId)) {
-    throw new ApiError(404, "Enter valid object id");
+    throw new ApiError(400, "Enter a valid object id.");
   }
 
   if (content.trim() === "") {
-    throw new ApiError(404, "content required");
+    throw new ApiError(400, "Content is required.");
   }
 
   const comment = await Comment.create({
@@ -96,7 +108,7 @@ const addComment = asyncHandler(async (req, res) => {
   });
 
   if (!comment) {
-    throw new ApiError(500, "Failed to comment try again");
+    throw new ApiError(400, "Failed to post comment. Please try again.");
   }
 
   return res
@@ -110,11 +122,11 @@ const updateComment = asyncHandler(async (req, res) => {
   const { content } = req.body;
 
   if (!isValidObjectId(commentId)) {
-    throw new ApiError(404, "Enter valid object id");
+    throw new ApiError(400, "Enter a valid object id.");
   }
 
   if (content.trim() === "") {
-    throw new ApiError(404, "Content is empty");
+    throw new ApiError(400, "Content cannot be empty.");
   }
 
   const newComment = await Comment.findByIdAndUpdate(
@@ -129,7 +141,7 @@ const updateComment = asyncHandler(async (req, res) => {
     }
   );
   if (!newComment) {
-    throw new ApiError(500, "Failed to edit comment, try again!");
+    throw new ApiError(500, "Failed to edit comment, please try again.");
   }
 
   return res
@@ -143,7 +155,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   const { commentId } = req.params;
 
   if (!isValidObjectId(commentId)) {
-    throw new ApiError(404, "Enter valid ");
+    throw new ApiError(400, "Enter a valid commentId.");
   }
 
   const comment = await Comment.findById(commentId);
@@ -153,10 +165,7 @@ const deleteComment = asyncHandler(async (req, res) => {
   }
 
   if (comment?.user.toString() !== req.user?._id.toString()) {
-    throw new ApiError(
-      404,
-      "Comment cant delete this commengt since you are not the owner"
-    );
+    throw new ApiError(403, "You are not authorized to delete this comment.");
   }
 
   await Comment.findByIdAndDelete(commentId);
