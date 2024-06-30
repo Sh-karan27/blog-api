@@ -118,7 +118,7 @@ const getLikedBlog = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        likedBlogs: "$likedBlogs",
+        likedBlogs: { $arrayElemAt: ["$likedBlogs", 0] },
       },
     },
 
@@ -133,9 +133,17 @@ const getLikedBlog = asyncHandler(async (req, res) => {
     throw new ApiResponse(500, "Failed to fetch liked blogs, try again");
   }
 
+  const likedBlogList = likedBlog.map((currVal) => currVal.likedBlogs);
+
   return res
     .status(200)
-    .json(new ApiResponse(200, likedBlog, "Liked blogs fetched successfully"));
+    .json(
+      new ApiResponse(
+        200,
+        { likedBlogsCount: likedBlogList.length, likedBlogList },
+        "Liked blogs fetched successfully"
+      )
+    );
 });
 
 export { toggleBlogLike, toggleCommentLike, getLikedBlog };

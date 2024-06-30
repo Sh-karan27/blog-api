@@ -13,7 +13,7 @@ const toggleFollower = asyncHandler(async (req, res) => {
   }
 
   const userProfile = await User.findById(profileId).select(
-    "username profileImage"
+    "username profileImage.url"
   );
 
   if (!userProfile) {
@@ -109,7 +109,7 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
           {
             $project: {
               username: 1,
-              profileImage: 1,
+              "profileImage.url": 1,
               followedToFollower: 1,
             },
           },
@@ -118,15 +118,15 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        followerCount: {
-          $size: "$follower",
+        follower: {
+          $arrayElemAt: ["$follower", 0],
         },
       },
     },
     {
       $project: {
+        _id: 0,
         follower: 1,
-        followerCount: 1,
       },
     },
   ]);
@@ -135,12 +135,14 @@ const getUserProfileFollower = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to get user followers");
   }
 
+  const followerList = follower.map((currVal) => currVal.follower);
+
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        follower,
+        { followerCount: followerList.length, followerList },
         "User profile follower fetched successfully"
       )
     );
@@ -190,7 +192,7 @@ const getUserProfileFollowing = asyncHandler(async (req, res) => {
           {
             $project: {
               username: 1,
-              profileImage: 1,
+              "profileImage.url": 1,
               followingUs: 1,
             },
           },
@@ -199,15 +201,13 @@ const getUserProfileFollowing = asyncHandler(async (req, res) => {
     },
     {
       $addFields: {
-        followingCount: {
-          $size: "$following",
-        },
+        following: { $arrayElemAt: ["$following", 0] },
       },
     },
     {
       $project: {
+        _id: 0,
         following: 1,
-        followingCount: 1,
       },
     },
   ]);
@@ -215,12 +215,14 @@ const getUserProfileFollowing = asyncHandler(async (req, res) => {
     throw new ApiError(500, "Failed to get UserProfile following");
   }
 
+  const followingList = following.map((currVal) => currVal.following);
+
   return res
     .status(200)
     .json(
       new ApiResponse(
         200,
-        following,
+        { followingCount: following.length, followingList },
         "user profile following fetched successfully"
       )
     );
