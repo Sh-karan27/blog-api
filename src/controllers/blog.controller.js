@@ -624,7 +624,7 @@ const toggleStatus = asyncHandler(async (req, res) => {
       {
         new: true,
       }
-    ).select("title description coverImage author published");
+    ).select("title description published");
 
     return res
       .status(200)
