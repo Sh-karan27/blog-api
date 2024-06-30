@@ -461,7 +461,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
   ]);
-  if (!userProfile) {
+  if (userProfile.length === 0) {
     throw new ApiError(404, "User profile does not exist");
   }
   return res
