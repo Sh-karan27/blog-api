@@ -400,9 +400,20 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     throw new ApiError(400, "User name is required");
   }
 
+  // const userExist = await User.findOne({ username });
+
+  // if (!userExist) {
+  //   throw new ApiError(404, "User not found");
+  // }
+
   const userProfile = await User.aggregate([
     {
-      $match: { username: username?.toLowerCase() },
+      $match: {
+        username: {
+          $regex: username?.toLowerCase(),
+          $options: "i",
+        },
+      },
     },
     {
       $lookup: {
