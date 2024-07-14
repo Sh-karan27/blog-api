@@ -5,6 +5,7 @@ import {
   getBlogById,
   updateBlog,
   deleteBlog,
+  getUserBlogs,
   toggleStatus,
 } from "../controllers/blog.controller.js";
 import { verifyJWT } from "../middlewares/auth.middleware.js";
@@ -27,5 +28,6 @@ router
 
 router.route("/toggle/status/:blogId").patch(toggleStatus);
 
-export default router;
+router.route("/u/:userId").get(getUserBlogs);
 
+export default router;

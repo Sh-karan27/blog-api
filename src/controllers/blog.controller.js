@@ -654,11 +654,32 @@ const toggleStatus = asyncHandler(async (req, res) => {
   //change the status
 });
 
+const getUserBlogs = asyncHandler(async (req, res) => {
+  const { userId } = req.params;
+
+  if (!isValidObjectId(userId)) {
+    throw new ApiError(401, "Invalid userId");
+  }
+
+  const userBlog = await Blog.find({
+    author: userId,
+  });
+
+  if (!userBlog) {
+    throw new ApiError(500, "Failed to fetch user blogs");
+  }
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, userBlog, "User blog fetched successfully"));
+});
+
 export {
   getAllBlogs,
   publishBlog,
   getBlogById,
   updateBlog,
   deleteBlog,
+  getUserBlogs,
   toggleStatus,
 };
