@@ -88,6 +88,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
               },
             },
           },
+          {
+            $unwind: "$authorDetails",
+          },
         ],
       },
     },
@@ -98,9 +101,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         totalViews: { $size: "$blogs.views" },
       },
     },
-    {
-      $unwind: "$blogs",
-    },
+    // {
+    //   $unwind: "$blogs",
+    // },
     {
       $project: {
         _id: 1,
@@ -121,6 +124,10 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
       },
     },
   ]);
+
+  // const userPlaylist = await Playlist.find({
+  //   user: userId,
+  // });
 
   if (!userPlaylist) {
     throw new ApiError(500, "Failed to get user playlist");
