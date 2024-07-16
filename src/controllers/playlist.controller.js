@@ -99,6 +99,9 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
       },
     },
     {
+      $unwind: "$blogs",
+    },
+    {
       $project: {
         _id: 1,
         name: 1,
