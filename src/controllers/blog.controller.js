@@ -661,9 +661,22 @@ const getUserBlogs = asyncHandler(async (req, res) => {
     throw new ApiError(401, "Invalid userId");
   }
 
-  const userBlog = await Blog.find({
-    author: userId,
-  });
+  // const userBlog = await Blog.find({
+  //   author: userId,
+  // });
+
+  const userBlog = await Blog.aggregate([
+    {
+      $match: {
+        author: new mongoose.Types.ObjectId(userId),
+      },
+    },
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
+  ]);
 
   if (!userBlog) {
     throw new ApiError(500, "Failed to fetch user blogs");
