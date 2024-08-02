@@ -78,6 +78,9 @@ const getBlogComments = asyncHandler(async (req, res) => {
     {
       $limit: pageSize,
     },
+    {
+      $sort: { createdAt: -1 },
+    },
   ]);
 
   if (!blogComments) {
