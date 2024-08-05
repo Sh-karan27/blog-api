@@ -96,11 +96,13 @@ const addComment = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
   const { content } = req.body;
 
+  console.log(content);
+
   if (!isValidObjectId(blogId)) {
     throw new ApiError(400, "Enter a valid object id.");
   }
 
-  if (content.trim() === "") {
+  if (!content || content.trim() === "") {
     throw new ApiError(400, "Content is required.");
   }
 
