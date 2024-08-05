@@ -102,7 +102,7 @@ const addComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Enter a valid object id.");
   }
 
-  if (!content || content.trim() === "") {
+  if (!content) {
     throw new ApiError(400, "Content is required.");
   }
 
