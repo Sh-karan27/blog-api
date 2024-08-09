@@ -96,13 +96,15 @@ const addComment = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
   const { content } = req.body;
 
+  // console.log("Request Body:", req.body); // Add this line
+
   console.log(content);
 
   if (!isValidObjectId(blogId)) {
     throw new ApiError(400, "Enter a valid object id.");
   }
 
-  if (!content) {
+  if (!content || content.trim() === "") {
     throw new ApiError(400, "Content is required.");
   }
 
@@ -130,7 +132,7 @@ const updateComment = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Enter a valid object id.");
   }
 
-  if (content.trim() === "") {
+  if (!content || content.trim() === "") {
     throw new ApiError(400, "Content cannot be empty.");
   }
 

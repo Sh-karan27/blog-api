@@ -237,7 +237,6 @@ const getAllBlogs = asyncHandler(async (req, res) => {
     },
     {
       $project: {
-        _id: 0,
         authorDetails: 1,
         title: 1,
         description: 1,
@@ -248,6 +247,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
         likeCount: 1,
         comments: 1,
         commentCount: 1,
+        createdAt: 1,
       },
     },
     {
@@ -401,7 +401,7 @@ const getBlogById = asyncHandler(async (req, res) => {
           },
           {
             $project: {
-              _id: 0,
+              _id: 1,
               username: 1,
               "profileImage.url": 1,
               followerCount: 1,
