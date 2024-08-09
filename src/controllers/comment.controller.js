@@ -64,6 +64,7 @@ const getBlogComments = asyncHandler(async (req, res) => {
         likeCount: 1,
         isLiked: 1,
         user: {
+          _id: 1,
           username: 1,
           "profileImage.url": 1,
         },
