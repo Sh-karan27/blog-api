@@ -44,7 +44,7 @@ const registerUser = asyncHandler(async (req, res) => {
   // }
 
   if (!username || !email || !password) {
-    throw new ApiError(401, "all keys are required");
+    throw new ApiError(400, "all keys are required");
   }
 
   const userExist = await User.findOne({ $or: [{ username }, { email }] });
