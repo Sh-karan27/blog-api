@@ -39,8 +39,12 @@ const registerUser = asyncHandler(async (req, res) => {
 
   const { username, email, password, bio } = req.body;
 
-  if ([username, password, email].some((field) => field.trim() === "")) {
-    throw new ApiError(400, "All fileds are required");
+  // if ([username, password, email].some((field) => field.trim() === "")) {
+  //   throw new ApiError(400, "All fileds are required");
+  // }
+
+  if (!username || !email || !password) {
+    throw new ApiError(401, "all keys are required");
   }
 
   const userExist = await User.findOne({ $or: [{ username }, { email }] });
