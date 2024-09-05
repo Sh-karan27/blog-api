@@ -72,6 +72,12 @@ const getLikedBlog = asyncHandler(async (req, res) => {
         likedBy: req.user?._id,
       },
     },
+    // Add a match to exclude entries where the comment field is populated
+    {
+      $match: {
+        blog: { $exists: true }, // Only include documents where the blog field exists
+      },
+    },
     {
       $lookup: {
         from: "blogs",
@@ -121,7 +127,11 @@ const getLikedBlog = asyncHandler(async (req, res) => {
         likedBlogs: { $arrayElemAt: ["$likedBlogs", 0] },
       },
     },
-
+    {
+      $sort: {
+        createdAt: -1,
+      },
+    },
     {
       $project: {
         _id: 0,

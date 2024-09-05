@@ -111,6 +111,7 @@ const getUserPlaylists = asyncHandler(async (req, res) => {
         description: 1,
         totalViews: 1,
         totalBlogs: 1,
+        createdAt: 1,
         blogs: {
           title: 1,
           description: 1,
@@ -180,15 +181,12 @@ const getPlaylistById = asyncHandler(async (req, res) => {
 
     {
       $project: {
-        name: 1,
-        description: 1,
-        createdAt: 1,
         blogs: {
           _id: 1,
-          name: 1,
+          title: 1,
           description: 1,
           "coverImage.url": 1,
-          view: 1,
+          views: 1,
           createdAt: 1,
         },
         owner: {
@@ -205,7 +203,11 @@ const getPlaylistById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(
-      new ApiResponse(200, { playList, playlistBlogs }, "Fetch playlist by id")
+      new ApiResponse(
+        200,
+        { playList, playlistBlogs: playlistBlogs[0] },
+        "Fetch playlist by id"
+      )
     );
 });
 
@@ -348,10 +350,10 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   if (!isValidObjectId(playlistId)) {
     throw new ApiError(400, "Enter valid playlist Id");
   }
-  if (name.trim() === "") {
+  if (!name) {
     throw new ApiError(400, "Name field is Empty");
   }
-  if (description.trim() === "") {
+  if (!description) {
     throw new ApiError(400, "Description field is Empty");
   }
 
@@ -362,7 +364,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
   }
 
   if (playList?.user.toString() !== req.user?._id.toString()) {
-    throw new ApiError(403, "Cant update playlist you are not the owen");
+    throw new ApiError(403, "Cannot update playlist, you are not the owner");
   }
 
   const updatedPlayList = await Playlist.findByIdAndUpdate(
@@ -373,7 +375,7 @@ const updatePlaylist = asyncHandler(async (req, res) => {
     { new: true }
   );
 
-  if (!updatePlaylist) {
+  if (!updatedPlayList) {
     throw new ApiError(500, "Failed to update playlist");
   }
 
