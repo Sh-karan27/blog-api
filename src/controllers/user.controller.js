@@ -400,7 +400,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 const getUserChannelProfile = asyncHandler(async (req, res) => {
   const { username } = req.params;
 
-  if (!username?.trim()) {
+  if (!username) {
     throw new ApiError(400, "User name is required");
   }
 
@@ -414,7 +414,7 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
     {
       $match: {
         username: {
-          $regex: username?.toLowerCase(),
+          $regex: username,
           $options: "i",
         },
       },
@@ -454,6 +454,11 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
       },
     },
     {
+      $sort: {
+        followerCount: -1,
+      },
+    },
+    {
       $project: {
         username: 1,
         followerCount: 1,
@@ -462,6 +467,8 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         profileImage: 1,
         coverImage: 1,
         email: 1,
+        createdAt: 1,
+        bio:1,
       },
     },
   ]);
