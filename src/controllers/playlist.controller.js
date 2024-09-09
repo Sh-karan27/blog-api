@@ -146,13 +146,8 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     throw new ApiError(400, "Enter valid playlistId");
   }
 
-  const playList = await Playlist.findById(playlistId);
-
-  if (!playList) {
-    throw new ApiError(404, "Playlist not found");
-  }
-
-  const playlistBlogs = await Playlist.aggregate([
+  // Aggregating playlist details and blogs
+  const playlistData = await Playlist.aggregate([
     {
       $match: { _id: new mongoose.Types.ObjectId(playlistId) },
     },
@@ -165,12 +160,6 @@ const getPlaylistById = asyncHandler(async (req, res) => {
       },
     },
     {
-      $match: {
-        "blogs.published": true,
-      },
-    },
-
-    {
       $lookup: {
         from: "users",
         localField: "user",
@@ -178,16 +167,24 @@ const getPlaylistById = asyncHandler(async (req, res) => {
         as: "owner",
       },
     },
-
+    {
+      $unwind: {
+        path: "$owner",
+        preserveNullAndEmptyArrays: true, // Ensures the owner field is not mandatory
+      },
+    },
     {
       $project: {
+        _id: 1,
+        name: 1,
+        description: 1,
+        createdAt: 1,
         blogs: {
-          _id: 1,
-          title: 1,
-          description: 1,
-          "coverImage.url": 1,
-          views: 1,
-          createdAt: 1,
+          $filter: {
+            input: "$blogs",
+            as: "blog",
+            cond: { $eq: ["$$blog.published", true] },
+          },
         },
         owner: {
           username: 1,
@@ -197,19 +194,23 @@ const getPlaylistById = asyncHandler(async (req, res) => {
     },
   ]);
 
-  if (!playlistBlogs) {
-    throw new ApiError(500, "Failed too get blogs in playlist.");
+  // Check if playlist data is found
+  if (!playlistData.length) {
+    throw new ApiError(404, "Playlist not found");
   }
+
+  // If no blogs are published, the 'blogs' field will be an empty array
+  const playlist = playlistData[0];
+  if (!playlist.blogs) {
+    playlist.blogs = []; // Ensure blogs is always an array
+  }
+
+  // Returning playlist details along with associated blogs
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        { playList, playlistBlogs: playlistBlogs[0] },
-        "Fetch playlist by id"
-      )
-    );
+    .json(new ApiResponse(200, { playlist }, "Fetch playlist by id"));
 });
+
 
 const addBlogToPlaylist = asyncHandler(async (req, res) => {
   const { playlistId, blogId } = req.params;
