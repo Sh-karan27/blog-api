@@ -1,11 +1,12 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
 app.use(
   cors({
-    origin: 'http://localhost:5173',
+    origin: "http://localhost:5173",
     credentials: true,
   })
 );
@@ -36,5 +37,7 @@ app.use("/api/v1/likes", likegRoutes);
 app.use("/api/v1/comments", commentRoutes);
 app.use("/api/v1/playlist", playlistRoutes);
 app.use("/api/v1/bookmark", bookmarkRoutes);
+
+app.use(errorHandler);
 
 export { app };
