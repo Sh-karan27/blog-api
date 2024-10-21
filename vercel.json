@@ -7,5 +7,5 @@
     }
   ],
 
-  "rewrites": [{ "source": "/(.*)", "destination": "index.js" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "app.js" }]
 }
