@@ -29,7 +29,9 @@ import commentRoutes from "./routes/comment.routes.js";
 import playlistRoutes from "./routes/playlist.routes.js";
 import bookmarkRoutes from "./routes/bookmark.routes.js";
 //routes declaration
-
+app.get("/", (req, res) => {
+  res.send("server ready");
+});
 app.use("/api/v1/users", userRouter);
 app.use("/api/v1/follow", subscriptionRoutes);
 app.use("/api/v1/blog", blogRoutes);
