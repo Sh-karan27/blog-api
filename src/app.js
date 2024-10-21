@@ -6,8 +6,7 @@ import { errorHandler } from "./middlewares/errorHandler.js";
 const app = express();
 app.use(
   cors({
-    origin: "https://blog-api-ten-rust.vercel.app",
-    credentials: true,
+    origin: "*",
   })
 );
 
