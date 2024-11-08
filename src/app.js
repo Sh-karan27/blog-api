@@ -10,12 +10,9 @@ const app = express();
 //   })
 // );
 
-const corsOptions = {
-  origin: "*", // Change this to your frontend URL
-  credentials: true, // Allow credentials (cookies, tokens, etc.)
-};
 
-app.use(cors(corsOptions));
+
+app.use(cors());
 
 app.use(
   express.json({
