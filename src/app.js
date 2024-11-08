@@ -4,11 +4,18 @@ import cookieParser from "cookie-parser";
 import { errorHandler } from "./middlewares/errorHandler.js";
 
 const app = express();
-app.use(
-  cors({
-    origin: "*",
-  })
-);
+// app.use(
+//   cors({
+//     origin: "*",
+//   })
+// );
+
+const corsOptions = {
+  origin: "http://localhost:5173", // Change this to your frontend URL
+  credentials: true, // Allow credentials (cookies, tokens, etc.)
+};
+
+app.use(cors(corsOptions));
 
 app.use(
   express.json({
