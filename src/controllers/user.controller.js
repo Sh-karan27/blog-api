@@ -357,34 +357,35 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserProfileImage = asyncHandler(async (req, res) => {
   try {
-    // Check if file was uploaded
-    const profileLocalPath = req.file?.path;
-    if (!profileLocalPath) {
-      console.error("No file uploaded");
+    const file = req.file;
+    if (!file) {
       throw new ApiError(400, "Profile file is missing");
     }
 
-    // Upload new profile image to Cloudinary
-    const profileImage = await uploadOnCloudinary(profileLocalPath);
+    // Upload the file buffer directly to Cloudinary
+    const profileImage = await uploadOnCloudinary(file.buffer);
     if (!profileImage) {
-      console.error("Error uploading image to Cloudinary");
-      throw new ApiError(500, "Error while uploading profile image on Cloudinary");
+      throw new ApiError(
+        500,
+        "Error while uploading profile image on Cloudinary"
+      );
     }
-    
+
     console.log("Uploaded new profile image:", profileImage);
 
-    // Delete old profile image if it exists
+    // Delete the old profile image if it exists
     const oldProfileImage = req.user?.profileImage?.public_id;
     if (oldProfileImage) {
       const deleteOldProfileImage = await deleteFromCloudinary(oldProfileImage);
       if (!deleteOldProfileImage) {
         console.error("Failed to delete old image:", oldProfileImage);
-        throw new ApiError(500, "Failed to delete old profile image from Cloudinary");
+        throw new ApiError(
+          500,
+          "Failed to delete old profile image from Cloudinary"
+        );
       }
-      console.log("Deleted old profile image:", oldProfileImage);
     }
 
-    // Update the user's profile image in the database
     const user = await User.findByIdAndUpdate(
       req.user?._id,
       {
@@ -398,12 +399,9 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
       { new: true }
     ).select("-password");
 
-    if (!user) {
-      console.error("User not found or failed to update");
-      throw new ApiError(500, "Failed to update profile");
-    }
-
-    return res.status(200).json(new ApiResponse(200, user, "Profile changed successfully"));
+    return res
+      .status(200)
+      .json(new ApiResponse(200, user, "Profile updated successfully"));
   } catch (error) {
     console.error("Error in updateUserProfileImage:", error);
     return res.status(error.statusCode || 500).json({
