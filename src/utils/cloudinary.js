@@ -25,18 +25,24 @@ cloudinary.config({
 //   }
 // };
 
- const uploadOnCloudinary = async (fileBuffer) => {
-  try {
-    const result = await cloudinary.v2.uploader.upload_stream({
-      resource_type: "image",
-    });
-
-    return result;
-  } catch (error) {
-    console.error("Cloudinary upload error:", error);
-    return null;
-  }
+const uploadOnCloudinary = (fileBuffer) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.v2.uploader.upload_stream(
+      { resource_type: "auto" },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          reject(null);
+        } else {
+          resolve(result);
+        }
+      }
+    );
+    stream.end(fileBuffer);
+  });
 };
+
+
 
 const deleteFromCloudinary = async (fileToDelete) => {
   try {
