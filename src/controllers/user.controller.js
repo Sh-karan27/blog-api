@@ -309,27 +309,65 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, user, "Account details updated"));
 });
 
-const updateUserProfileImage = asyncHandler(async (req, res) => {
-  if (!req.file) {
-    throw new ApiError(400, "Profile file is missing");
-  }
+// const updateUserProfileImage = asyncHandler(async (req, res) => {
 
-  // Upload the buffer directly to Cloudinary
-  const profileImage = await uploadOnCloudinary(req.file.buffer);
+//   if (!req.file) {
+//     throw new ApiError(400, "Profile file is missing");
+//   }
+
+//   // Upload the buffer directly to Cloudinary
+//   const profileImage = await uploadOnCloudinary(req.file.buffer);
+//   console.log(profileImage);
+//   if (!profileImage) {
+//     throw new ApiError(
+//       500,
+//       "Error while uploading profile image on Cloudinary"
+//     );
+//   }
+
+//   // Delete old image if it exists
+//   const oldProfileImage = req.user?.profileImage?.public_id;
+//   if (oldProfileImage) {
+//     await deleteFromCloudinary(oldProfileImage);
+//   }
+
+//   // Update the user's profile image in the database
+//   const user = await User.findByIdAndUpdate(
+//     req.user?._id,
+//     {
+//       $set: {
+//         profileImage: {
+//           url: profileImage.url,
+//           public_id: profileImage.public_id,
+//         },
+//       },
+//     },
+//     { new: true }
+//   ).select("-password");
+
+//   return res
+//     .status(200)
+//     .json(new ApiResponse(200, user, "Profile updated successfully"));
+// });
+
+const updateUserProfileImage = asyncHandler(async (req, res) => {
+  const oldProfileImage = req.user?.profileImage?.public_id;
+  const profileLocalPath = req.file?.path;
+  if (!profileLocalPath) {
+    throw new ApiError(404, "Profile file is missing");
+  }
+  const profileImage = await uploadOnCloudinary(profileLocalPath);
   if (!profileImage) {
+    throw new ApiError(500, "Error while uploading profileImage on cloudinary");
+  }
+  const deleteOldProfileImage = await deleteFromCloudinary(oldProfileImage);
+  if (!deleteOldProfileImage) {
+    console.log("failed");
     throw new ApiError(
       500,
-      "Error while uploading profile image on Cloudinary"
+      "Failed to delete old profileImage from cloudinary"
     );
   }
-
-  // Delete old image if it exists
-  const oldProfileImage = req.user?.profileImage?.public_id;
-  if (oldProfileImage) {
-    await deleteFromCloudinary(oldProfileImage);
-  }
-
-  // Update the user's profile image in the database
   const user = await User.findByIdAndUpdate(
     req.user?._id,
     {
@@ -342,12 +380,13 @@ const updateUserProfileImage = asyncHandler(async (req, res) => {
     },
     { new: true }
   ).select("-password");
-
+  if (!user) {
+    throw new ApiError(500, "Failed to update profile");
+  }
   return res
     .status(200)
-    .json(new ApiResponse(200, user, "Profile updated successfully"));
+    .json(new ApiResponse(200, user, "Profile changed successfully"));
 });
-
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
   const oldCoverImage = req.user?.coverImage?.public_id;

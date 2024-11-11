@@ -17,7 +17,7 @@ cloudinary.config({
 
 //     fs.unlinkSync(localFilePath);
 //     //file has been uploaded
-//     // console.log(response);
+//     console.log(response);
 //     return response;
 //   } catch (error) {
 //     fs.unlinkSync(localFilePath); //remove the locally saved temporary file as the upload operation got failed
@@ -25,22 +25,42 @@ cloudinary.config({
 //   }
 // };
 
-const uploadOnCloudinary = (fileBuffer) => {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.v2.uploader.upload_stream(
-      { resource_type: "auto" },
-      (error, result) => {
-        if (error) {
-          console.error("Cloudinary upload error:", error);
-          reject(null);
-        } else {
-          resolve(result);
-        }
-      }
-    );
-    stream.end(fileBuffer);
-  });
+
+
+const uploadOnCloudinary = async (localFilePath) => {
+  try {
+    if (!localFilePath) return null;
+    //upload the file on cloudinary
+    const response = await cloudinary.uploader.upload(localFilePath, {
+      resource_type: "auto",
+    });
+
+    fs.unlinkSync(localFilePath);
+    //file has been uploaded
+    // console.log(response);
+    return response;
+  } catch (error) {
+    fs.unlinkSync(localFilePath); //remove the locally saved temporary file as the upload operation got failed
+    return null;
+  }
 };
+
+// const uploadOnCloudinary = (fileBuffer) => {
+//   return new Promise((resolve, reject) => {
+//     const stream = cloudinary.v2.uploader.upload_stream(
+//       { resource_type: "auto" },
+//       (error, result) => {
+//         if (error) {
+//           console.error("Cloudinary upload error:", error);
+//           reject(null);
+//         } else {
+//           resolve(result);
+//         }
+//       }
+//     );
+//     stream.end(fileBuffer);
+//   });
+// };
 
 
 
