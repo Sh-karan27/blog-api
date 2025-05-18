@@ -10,20 +10,29 @@ const app = express();
 //   })
 // );
 
+// const corsOptions = {
+//   origin: (origin, callback) => {
+//     if (!origin) {
+//       // Allow requests like Postman or server-to-server requests (no origin)
+//       callback(null, true);
+//     } else {
+//       // Allow requests from any origin
+//       callback(null, true);
+//     }
+//   },
+//   credentials: true, // Allow cookies, tokens, etc.
+//   optionsSuccessStatus: 200,
+// };
+// app.use(cors(corsOptions));
+
 const corsOptions = {
-  origin: (origin, callback) => {
-    if (!origin) {
-      // Allow requests like Postman or server-to-server requests (no origin)
-      callback(null, true);
-    } else {
-      // Allow requests from any origin
-      callback(null, true);
-    }
-  },
-  credentials: true, // Allow cookies, tokens, etc.
+  origin: "http://localhost:5173", // Set specific frontend origin
+  credentials: true, // Allow cookies, authorization headers
   optionsSuccessStatus: 200,
 };
+
 app.use(cors(corsOptions));
+
 app.use(
   express.json({
     limit: "16kb",
