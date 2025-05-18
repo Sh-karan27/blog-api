@@ -25,13 +25,19 @@ const app = express();
 // };
 // app.use(cors(corsOptions));
 
+// Dynamic CORS setup to allow all origins WITH credentials
 const corsOptions = {
-  origin: "http://localhost:5173", // Set specific frontend origin
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like Postman) or from any origin
+    callback(null, origin || true);
+  },
   credentials: true, // Allow cookies, authorization headers
   optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
+
+// app.use(cors(corsOptions));
 
 app.use(
   express.json({
