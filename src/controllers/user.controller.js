@@ -433,25 +433,21 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
 });
 
 const getUserChannelProfile = asyncHandler(async (req, res) => {
-  const { username } = req.params;
+  const { id } = req.params;
 
-  if (!username) {
-    throw new ApiError(400, "User name is required");
+  if (!id) {
+    throw new ApiError(400, "User ID is required");
   }
 
-  // const userExist = await User.findOne({ username });
-
-  // if (!userExist) {
-  //   throw new ApiError(404, "User not found");
-  // }
+  // Convert to ObjectId and validate
+  if (!mongoose.isValidObjectId(id)) {
+    throw new ApiError(400, "Invalid user ID");
+  }
 
   const userProfile = await User.aggregate([
     {
       $match: {
-        username: {
-          $regex: username,
-          $options: "i",
-        },
+        _id: new mongoose.Types.ObjectId(id),
       },
     },
     {
@@ -470,7 +466,6 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         as: "following",
       },
     },
-
     {
       $addFields: {
         followerCount: {
@@ -479,11 +474,36 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         followingToCount: {
           $size: "$following",
         },
-        isFollowing: {
+
+        // ✅ isOwner FIRST
+        isOwner: {
+          $eq: ["$_id", new mongoose.Types.ObjectId(req.user?._id)],
+        },
+        isFollower: {
           $cond: {
-            if: { $in: [req.user?._id, "$followers.follower"] },
+            if: {
+              $and: [
+                { $ne: ["$_id", req.user?._id] }, // not same user
+                { $in: [req.user?._id, "$following.following"] },
+              ],
+            },
             then: true,
             else: false,
+          },
+        },
+        // ✅ isFollowing ONLY if not owner
+        isFollowing: {
+          $cond: {
+            if: {
+              $eq: ["$_id", new mongoose.Types.ObjectId(req.user?._id)],
+            },
+            then: false, // 👈 same user → never "following"
+            else: {
+              $in: [
+                new mongoose.Types.ObjectId(req.user?._id),
+                "$followers.follower",
+              ],
+            },
           },
         },
       },
@@ -504,12 +524,17 @@ const getUserChannelProfile = asyncHandler(async (req, res) => {
         email: 1,
         createdAt: 1,
         bio: 1,
+        isOwner: 1,
+        isFollowing: 1,
+        isFollower: 1,
       },
     },
   ]);
-  if (userProfile.length === 0) {
+
+  if (!userProfile.length) {
     throw new ApiError(404, "User profile does not exist");
   }
+
   return res
     .status(200)
     .json(

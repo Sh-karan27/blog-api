@@ -8,32 +8,54 @@ import { Blog } from "../models/blog.model.js";
 
 const toggleBlogLike = asyncHandler(async (req, res) => {
   const { blogId } = req.params;
-  //TODO: toggle like on video
 
   if (!isValidObjectId(blogId)) {
     throw new ApiError(400, "Enter a valid blogId");
   }
 
-  const like = await Like.findOne({
+  const blog = await Blog.findById(blogId).select("_id title");
+
+  if (!blog) {
+    throw new ApiError(404, "Blog not found");
+  }
+
+  const existingLike = await Like.findOne({
     likedBy: req.user?._id,
     blog: blogId,
   });
 
-  if (like) {
-    await Like.findByIdAndDelete(like?._id);
-    return res.status(200).json(new ApiResponse(200, "UnLiked Blog!"));
+  let isLiked = false;
+  let message = "";
+
+  if (existingLike) {
+    await Like.findByIdAndDelete(existingLike._id);
+    isLiked = false;
+    message = "Blog unliked successfully.";
+  } else {
+    const liked = await Like.create({
+      likedBy: req.user?._id,
+      blog: blogId,
+    });
+
+    if (!liked) {
+      throw new ApiError(500, "Failed to like blog");
+    }
+
+    isLiked = true;
+    message = "Blog liked successfully.";
   }
 
-  const liked = await Like.create({
-    likedBy: req.user?._id,
-    blog: blogId,
+  const likeCount = await Like.countDocuments({ blog: blogId });
+
+  return res.status(200).json({
+    success: true,
+    statusCode: 200,
+    message,
+    blogId: blog._id,
+    title: blog.title,
+    likeCount,
+    isLiked,
   });
-
-  if (!liked) {
-    throw new ApiError(500, "Failed to like blog");
-  }
-
-  return res.status(200).json(new ApiResponse(200, "Blog liked successfully."));
 });
 
 const toggleCommentLike = asyncHandler(async (req, res) => {

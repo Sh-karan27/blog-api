@@ -56,7 +56,7 @@ import likegRoutes from "./routes/like.routes.js";
 import commentRoutes from "./routes/comment.routes.js";
 import playlistRoutes from "./routes/playlist.routes.js";
 import bookmarkRoutes from "./routes/bookmark.routes.js";
-//routes declaration
+import notificationRoutes from "./routes/notification.routes.js";
 app.get("/", (req, res) => {
   res.send("server ready");
 });
@@ -67,6 +67,7 @@ app.use("/api/v1/likes", likegRoutes);
 app.use("/api/v1/comments", commentRoutes);
 app.use("/api/v1/playlist", playlistRoutes);
 app.use("/api/v1/bookmark", bookmarkRoutes);
+app.use("/api/v1/notifications", notificationRoutes);
 
 app.use(errorHandler);
 

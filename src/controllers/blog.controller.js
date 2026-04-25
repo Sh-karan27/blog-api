@@ -656,37 +656,98 @@ const toggleStatus = asyncHandler(async (req, res) => {
 
 const getUserBlogs = asyncHandler(async (req, res) => {
   const { userId } = req.params;
+  const {
+    page = 1,
+    limit = 10,
+    sortBy = "createdAt",
+    sortType = "desc",
+  } = req.query;
 
   if (!isValidObjectId(userId)) {
     throw new ApiError(401, "Invalid userId");
   }
 
-  // const userBlog = await Blog.find({
-  //   author: userId,
-  // });
+  const pageNumber = Math.max(1, parseInt(page) || 1);
+  const pageSize = Math.max(1, parseInt(limit) || 10);
+  const skip = (pageNumber - 1) * pageSize;
 
-  const userBlog = await Blog.aggregate([
-    {
-      $match: {
-        author: new mongoose.Types.ObjectId(userId),
+  // ✅ "views" exists in model, "likeCount" must be computed via $lookup
+  const validSortFields = ["createdAt", "views", "likeCount"];
+  const sortField = validSortFields.includes(sortBy) ? sortBy : "createdAt";
+  const sortOrder = sortType === "asc" ? 1 : -1;
+
+  const [userBlogs, totalCount] = await Promise.all([
+    Blog.aggregate([
+      {
+        $match: {
+          author: new mongoose.Types.ObjectId(userId),
+        },
       },
-    },
-    {
-      $sort: {
-        createdAt: -1,
+
+      // ✅ Lookup likes
+      {
+        $lookup: {
+          from: "likes",
+          localField: "_id",
+          foreignField: "blog",
+          as: "likes",
+        },
       },
-    },
+
+      // ✅ Lookup comments (NEW)
+      {
+        $lookup: {
+          from: "comments", // make sure this matches your collection name
+          localField: "_id",
+          foreignField: "blog", // field in Comment model
+          as: "comments",
+        },
+      },
+
+      // ✅ Add counts
+      {
+        $addFields: {
+          likeCount: { $size: "$likes" },
+          commentCount: { $size: "$comments" }, // 🔥 ADDED
+        },
+      },
+
+      // ✅ Remove raw arrays
+      {
+        $project: {
+          likes: 0,
+          comments: 0, // 🔥 ADDED
+        },
+      },
+
+      { $sort: { [sortField]: sortOrder } },
+      { $skip: skip },
+      { $limit: pageSize },
+    ]),
+
+    Blog.countDocuments({ author: new mongoose.Types.ObjectId(userId) }),
   ]);
 
-  if (!userBlog) {
-    throw new ApiError(500, "Failed to fetch user blogs");
-  }
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const hasMore = pageNumber < totalPages;
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, userBlog, "User blog fetched successfully"));
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        blogs: userBlogs,
+        pagination: {
+          totalCount,
+          totalPages,
+          currentPage: pageNumber,
+          pageSize,
+          hasMore,
+        },
+      },
+      "User blogs fetched successfully"
+    )
+  );
 });
-
 export {
   getAllBlogs,
   publishBlog,

@@ -25,8 +25,6 @@ cloudinary.config({
 //   }
 // };
 
-
-
 const uploadOnCloudinary = async (localFilePath) => {
   try {
     if (!localFilePath) return null;
@@ -61,8 +59,6 @@ const uploadOnCloudinary = async (localFilePath) => {
 //     stream.end(fileBuffer);
 //   });
 // };
-
-
 
 const deleteFromCloudinary = async (fileToDelete) => {
   try {
