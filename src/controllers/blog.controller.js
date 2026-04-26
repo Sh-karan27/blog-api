@@ -276,7 +276,8 @@ const publishBlog = asyncHandler(async (req, res) => {
     throw new ApiError(401, "All fields are required");
   }
 
-  const coverImageLocalPath = req.file?.path;
+  // ✅ cover image
+  const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
 
   if (!coverImageLocalPath) {
     throw new ApiError(400, "coverImage is required");
@@ -291,17 +292,41 @@ const publishBlog = asyncHandler(async (req, res) => {
     );
   }
 
+  // ✅ content images (max 3)
+  const contentImages = req.files?.content_images || [];
+
+  if (contentImages.length > 3) {
+    throw new ApiError(400, "Maximum 3 content images allowed");
+  }
+
+  let updatedContent = content;
+
+  // 🔥 replace placeholders with uploaded URLs
+  for (let i = 0; i < contentImages.length; i++) {
+    const file = contentImages[i];
+
+    const uploaded = await uploadOnCloudinary(file.path);
+
+    if (uploaded?.url) {
+      updatedContent = updatedContent.replace(
+        new RegExp(`<img[^>]*alt="__IMAGE_${i}__"[^>]*>`, "g"),
+        `<img src="${uploaded.url}" />`
+      );
+    }
+  }
+
   const blog = await Blog.create({
     author: req.user?._id,
     title,
     description,
-    content,
+    content: updatedContent, // ✅ final content
     coverImage: {
       public_id: coverImage.public_id,
       url: coverImage.url,
     },
     tag,
   });
+
   const blogUploaded = await Blog.findById(blog?._id);
 
   if (!blogUploaded) {
@@ -310,7 +335,7 @@ const publishBlog = asyncHandler(async (req, res) => {
 
   return res
     .status(200)
-    .json(new ApiResponse(200, blog, "blog uploaded successfullyy"));
+    .json(new ApiResponse(200, blogUploaded, "blog uploaded successfully"));
 });
 
 const getBlogById = asyncHandler(async (req, res) => {

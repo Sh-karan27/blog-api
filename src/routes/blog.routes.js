@@ -18,7 +18,10 @@ router.use(verifyJWT); // Applyy verifyJWT to all routes in this file
 router
   .route("/")
   .get(getAllBlogs)
-  .post(upload.single("coverImage"), publishBlog);
+  .post(upload.fields([
+    { name: "coverImage", maxCount: 1 },
+    { name: "content_images", maxCount: 3 },
+  ]), publishBlog);
 
 router
   .route("/:blogId")
